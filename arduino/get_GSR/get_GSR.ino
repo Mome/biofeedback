@@ -12,15 +12,15 @@ void loop() {
   float resistance = eHealth.getSkinResistance();
   float conductanceVol = eHealth.getSkinConductanceVoltage();
 
-  Serial.print("Conductance : ");       
+  Serial.print("Conductance (micro Siemens): ");       
   Serial.print(conductance, 2);  
   Serial.println("");         
 
-  Serial.print("Resistance : ");       
+  Serial.print("Resistance (Ohm): ");       
   Serial.print(resistance, 2);  
   Serial.println("");    
 
-  Serial.print("Conductance Voltage : ");       
+  Serial.print("Conductance Voltage (Volts): ");       
   Serial.print(conductanceVol, 4);  
   Serial.println("");
 
