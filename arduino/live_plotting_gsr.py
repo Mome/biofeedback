@@ -3,7 +3,20 @@ import numpy as np
 from matplotlib import pyplot as plt
 
 print "opening Serial port ..."
-ser = serial.Serial('/dev/ttyUSB1', 115200)
+ser = None
+
+try :
+    ser = serial.Serial('/dev/ttyUSB0', 115200)
+except :
+    print 'cannot open /dev/ttyUSB0'
+
+if ser == None :
+    try :
+        ser = serial.Serial('/dev/ttyUSB1', 115200)
+    except :
+        print 'cannot open /dev/ttyUSB1'
+        print 'Abort everything!'
+
 time.sleep(2)
 print "Initialize Complete"
 
@@ -20,7 +33,7 @@ print "Initialize Complete"
 
 plt.ion() # set plot to anumated
 
-ydata = [0] * 50
+ydata = [0] * 200 
 
 ax1=plt.axes()
 
@@ -33,10 +46,8 @@ f = open('tmp_file','a')
 # start data collection
 while True: 
     data = ser.readline() # read data from serial port and strip line endings
-
+    data = data.lstrip('\0')
     f.write(data)
-
-    #data.lstrip('\0')
 
     ymin = float(min(ydata))-10
     ymax = float(max(ydata))+10
