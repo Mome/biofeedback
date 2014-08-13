@@ -10,9 +10,10 @@ void loop() {
   //float resistance = eHealth.getSkinResistance();
   //float conductanceVol = eHealth.getSkinConductanceVoltage();
 
-  Serial.println(conductance, 2);  
-  //Serial.println(resistance, 2);  
-  //Serial.println(conductanceVol, 4);  
-
-  delay(100);            
+  Serial.print(conductance, 2);  
+  //Serial.print(resistance, 2);  
+  //Serial.print(conductanceVol, 4);  
+  Serial.print('\n');
+  
+  delay(1000);            
 }

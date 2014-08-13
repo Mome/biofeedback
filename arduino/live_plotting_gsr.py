@@ -33,13 +33,13 @@ print "Initialize Complete"
 
 plt.ion() # set plot to anumated
 
-ydata = [0] * 200 
+ydata = [0] * 50 
 
 ax1=plt.axes()
 
 # make plot
 line, = plt.plot(ydata)
-plt.ylim([-1,10]) # set the y-range to -1 to 10
+#plt.ylim([-1,10]) # set the y-range to -1 to 10
 
 f = open('tmp_file','a')
 
