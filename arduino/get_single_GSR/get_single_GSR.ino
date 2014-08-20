@@ -15,5 +15,5 @@ void loop() {
   //Serial.print(conductanceVol, 4);  
   Serial.print('\n');
   
-  delay(1000);            
+  delay(500);   
 }

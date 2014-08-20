@@ -18,12 +18,12 @@ def end_m():
 
 start_new_thread(end_m,())
 
-f = open('gsr_record','a')
+f = open('ecg_record','a')
 
 while not end :
     line = ser.readline()
     line = line.replace('\0','')
-    print line
+    #print line
     f.write(line)
 
 f.close()
