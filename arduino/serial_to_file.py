@@ -31,7 +31,7 @@ def end_m():
 
 start_new_thread(end_m,())
 
-f = open('ecg_record','a')
+f = open('ecg_gsr_record','a')
 
 while not end :
     line = ser.readline()
