@@ -16,7 +16,7 @@ ECG: arduPi.o eHealth.o ecg.cpp
 	g++ -I arduPi -I $(EHEALTH_PATH) -lpthread -lrt ecg.cpp arduPi.o eHealth.o -o ECG
 
 ECG_GSR: arduPi.o eHealth.o ecg_gsr.cpp
-        g++ -I arduPi -I $(EHEALTH_PATH) -lpthread -lrt ecg_gsr.cpp arduPi.o eHealth.o -o ECG_GSR
+	g++ -I arduPi -I $(EHEALTH_PATH) -lpthread -lrt ecg_gsr.cpp arduPi.o eHealth.o -o ECG_GSR
 
 clean:
 	rm -rf *o GSR ECG ECG_GSR
