@@ -33,8 +33,8 @@ int main (int argc, char *argv[]){
 	if ( term==false and file==false and socket==false  ) {
 		term=true;	
 	}
-	
-	if (file) out_file.open("data_record");
+		
+	if (file) out_file.open("data_record_" + to_string(time(0)));
 	
 	while(measure_loop){
 		if (ecg) ecg_value = eHealth.getECG();

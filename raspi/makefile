@@ -19,7 +19,7 @@ ECG_GSR: arduPi.o eHealth.o ecg_gsr.cpp
 	g++ -I arduPi -I $(EHEALTH_PATH) -lpthread -lrt ecg_gsr.cpp arduPi.o eHealth.o -o ECG_GSR
 
 GET_SENSOR_DATA: arduPi.o eHealth.o get_sensor_data.cpp
-	g++ -I arduPi -I $(EHEALTH_PATH) -lpthread -lrt get_sensor_data.cpp arduPi.o eHealth.o -o GET_SENSOR_DATA
+	g++ -std=c++0x -I arduPi -I $(EHEALTH_PATH) -lpthread -lrt get_sensor_data.cpp arduPi.o eHealth.o -o GET_SENSOR_DATA
 
 sweep:
 	rm -rf GET_SENSOR_DATA
