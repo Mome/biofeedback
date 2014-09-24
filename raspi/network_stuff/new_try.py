@@ -9,5 +9,5 @@ def runProcess(exe):
         if(retcode is not None):
             break
 
-for line in runProcess(['python','output_generator.py','&']):
+for line in runProcess(['../get_sensor_data','gsr','term']):
     print(line)

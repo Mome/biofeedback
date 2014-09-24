@@ -2,6 +2,7 @@
 #include <iostream>
 #include <fstream>
 #include <chrono>
+#include <stdlib.h>
 using namespace std;
 using namespace chrono;
 
@@ -13,17 +14,21 @@ int main (int argc, char *argv[]){
 	bool term = false;
 	bool socket = false;
 	
-	int delay_msec = 500;
+	int delay_msec = 50;
 	bool measure_loop = true;
 	float ecg_value, gsr_value;
 	ofstream out_file;
 	
 	for (int nArg=1; nArg < argc; nArg++) {
-		if ( strcmp("ecg",    argv[nArg])==0) ecg = true;
-		if ( strcmp("gsr",    argv[nArg])==0) gsr = true;
-		if ( strcmp("file",   argv[nArg])==0) file = true;
-                if ( strcmp("term",   argv[nArg])==0) term = true;
-		if ( strcmp("socket", argv[nArg])==0) socket = true;
+		if      ( strcmp("ecg",    argv[nArg])==0) ecg = true;
+		else if ( strcmp("gsr",    argv[nArg])==0) gsr = true;
+		else if ( strcmp("file",   argv[nArg])==0) file = true;
+		else if ( strcmp("term",   argv[nArg])==0) term = true;
+		else if ( strcmp("socket", argv[nArg])==0) socket = true;
+		else {
+			delay_msec = atoi(argv[nArg]);
+			cout << "delay set to " << delay_msec << "milliseconds." << endl;
+		}
 	}
 	if ( ecg==false and gsr==false ) {
 		ecg = true;
