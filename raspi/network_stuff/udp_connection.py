@@ -13,19 +13,17 @@ def runProcess(exe):
         if(retcode is not None):
             break
 
-def server():
-    #ip = '10.42.0.1'
-    ip = 'localhost'
+def server(app):
+    ip = '10.42.0.1'
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    for line in runProcess(['ping','localhost']):
+    for line in runProcess(app):
         sock.sendto(line, (ip, port))
 
 def client():
-    #ip = '10.42.0.2'
-    ip = 'localhost'
+    ip = '10.42.0.2'
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind((ip,port))
+    sock.bind(('',port))
     while 1:
         data, addr = sock.recvfrom(1024)
         print "received message:", data
@@ -34,6 +32,6 @@ def client():
 
 if __name__=='__main__':
     if sys.argv[1]=='server':
-        server()
+        server(sys.argv[2:])
     elif sys.argv[1]=='client':
         client()
