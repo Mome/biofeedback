@@ -18,7 +18,7 @@ def server(app):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
     for line in runProcess(app):
-        sock.sendto(line, (ip, port))
+        sock.sendto(line.strip(), (ip, port))
 
 def client():
     ip = '10.42.0.2'
