@@ -2,6 +2,7 @@ import serial
 import time
 import sys
 import glob
+import io
 
 def serial_ports():
     """Lists serial ports
@@ -54,13 +55,26 @@ if __name__ == '__main__' :
         exit()
     
     try :
-        ser = serial.Serial(port, baud, timeout=0)
+        ser = serial.Serial(port, baud)
     except :
-        print 'Could not open!'    
+        print 'Could not open!'
     
     print "Initialize Complete"
+    raw_input('Start?')
+    #import inspect
+    #for cls in inspect.getmro(type(ser)):
+    #    print cls
+    #raw_input()
+    
 
+    #while 1:
+    #    print ser.readline().strip()
+    
+    sio = io.TextIOWrapper(io.BufferedRWPair(ser, ser))
+    print dir(sio)
+        
     while 1:
-        print ser.readline()
-        #time.sleep(0.2)
+        print sio.readlines()
+        time.sleep(1)
+        
        
