@@ -35,7 +35,6 @@ def serial_ports():
             pass
     return result
 
-
 if __name__ == '__main__' :
 
     #arduino = serial.Serial(2, 9600, timeout=1)

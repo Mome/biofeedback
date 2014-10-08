@@ -36,7 +36,7 @@ class AnimatedPlotter :
         return self.line,
 
     def start(self):
-        ani = animation.FuncAnimation(self.fig, self.run, self.data_gen, blit=True, interval=10, repeat=False)
+        ani = animation.FuncAnimation(self.fig, self.run, self.data_gen, blit=True, interval=50, repeat=False)
         plt.show()
 
 def plot_stream():
