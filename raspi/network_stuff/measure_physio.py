@@ -6,10 +6,9 @@ import sys
 import threading
 import time
 
+import pyqtgraph as pg
+from pyqtgraph.Qt import QtCore, QtGui
 
-import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.animation as animation
 
 class UdpStreamReader:
     
@@ -81,7 +80,7 @@ class BufferedStreamReader:
         else :
             self.is_stopped=False
             threading.Thread(target=self._run).start()
-            print 'Reading udp-socket buffered at port: ' + str(self.stream_reader.port) + ' !'
+            print 'Reading at port: ' + str(self.stream_reader.port) + ' !'
 
     def _run(self):
         while not self.is_stopped:
@@ -99,7 +98,7 @@ class BufferedStreamReader:
     def read(self):
         out = self.buffer[:self.index]
         self.index = 0
-        print 'len(out):', len(out)
+        #print 'len(out):', len(out)
         return out
     
     def sleep_and_read(self,delay=0.1):
@@ -151,45 +150,26 @@ class UdpStreamer :
                 
 class AnimatedPlotter :
 
-    def __init__(self, bfs, display_len=200):
-        self.bfs = bfs # buffered stream reader
-        self.fig, self.ax = plt.subplots()
-        self.line, = self.ax.plot([], [], lw=2)
-        self.ax.set_ylim(-1.1, 3.0)
-        #self.ax.set_xlim(0, 5)
-        self.ax.grid()
-        self.xdata = list(range(display_len))
-        self.ydata = [0]*display_len
+    def __init__(self,bfs,display_len=500,plot_type='cont') :
+        self.bfs = bfs
+        self.display_len=display_len
+        self.window=pg.plot(title="Crank-Slider Mechanism")
+        self.x = list(range(display_len))
+        self.y = [0]*display_len
+        self.plot_type = plot_type
 
-    def data_gen(self):
-        t = 0
-        while True :
-            lines = self.bfs.read()           
-            lines = [line.split()[1] for line in lines]
-            if len(lines) > 0 :
-                yield lines
-            else :
-                print 'No data received !'
-                yield [0]
-            t+=1
-    
-    #def data_gen(self):
-    #    cnt = 0
-    #    while cnt < 1000:
-    #        cnt+=1
-    #        self.t += 0.05
-    #        yield self.t, np.sin(2*np.pi*self.t) * np.exp(-self.t/10.)
-    
-    def run(self, data):
-        self.ydata = self.ydata[len(data):] + data
-        print self.ydata
-        self.line.set_data(self.xdata, self.ydata)
-        return self.line,
+    def update(self):
+        if self.plot_type=='cont':
+            data = self.bfs.read()
+            data = [float(d.split()[1]) for d in data]
+            self.y.extend(data)
+            self.window.plot(self.x,self.y[-self.display_len:],clear=True)
 
     def start(self):
-        ani = animation.FuncAnimation(self.fig, self.run, self.data_gen, blit=True, interval=10, repeat=False)
-        plt.show()
-    
+        self.time=QtCore.QTimer()
+        self.time.timeout.connect(self.update)
+        self.time.start(60)                
+
     
 def main():
     parser = argparse.ArgumentParser(description='Read a stream and print it to some output interface.')
@@ -231,8 +211,8 @@ def main():
     if args.input == 'serial' :
         stream_reader = SerialStreamReader(args.port)
     
-    print args
-    if raw_input('type exit to exit: ') == 'exit' : exit()
+    #print args
+    #if raw_input('type exit to exit: ') == 'exit' : exit()
     
     bsr = BufferedStreamReader(stream_reader)
     
@@ -247,6 +227,8 @@ def main():
         plotter = AnimatedPlotter(bsr)
         bsr.start()
         plotter.start()
+        if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
+            QtGui.QApplication.instance().exec_()
         
     if args.output == 'file' :
         pass
