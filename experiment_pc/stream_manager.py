@@ -147,29 +147,6 @@ class UdpStreamer :
             if(retcode is not None):
                 break
 
-                
-class AnimatedPlotter :
-
-    def __init__(self,bfs,display_len=500,plot_type='cont') :
-        self.bfs = bfs
-        self.display_len=display_len
-        self.window=pg.plot(title="Crank-Slider Mechanism")
-        self.x = list(range(display_len))
-        self.y = [0]*display_len
-        self.plot_type = plot_type
-
-    def update(self):
-        if self.plot_type=='cont':
-            data = self.bfs.read()
-            data = [float(d.split()[1]) for d in data]
-            self.y.extend(data)
-            self.window.plot(self.x,self.y[-self.display_len:],clear=True)
-
-    def start(self):
-        self.time=QtCore.QTimer()
-        self.time.timeout.connect(self.update)
-        self.time.start(60)                
-
     
 def main():
     parser = argparse.ArgumentParser(description='Read a stream and print it to some output interface.')
@@ -224,7 +201,7 @@ def main():
             time.sleep(1)
     
     if args.output == 'graphical' :
-        plotter = AnimatedPlotter(bsr)
+        plotter = AnimatedPlotter('Skin Conductance (GSR)',bsr,1)
         bsr.start()
         plotter.start()
         if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
