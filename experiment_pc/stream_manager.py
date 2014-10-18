@@ -1,14 +1,13 @@
 import argparse
+import math
+import random
 import serial
 import socket
 import subprocess
 import sys
 import threading
 import time
-
-import pyqtgraph as pg
-from pyqtgraph.Qt import QtCore, QtGui
-
+import configurations as conf
 
 class UdpStreamReader:
     
@@ -20,7 +19,6 @@ class UdpStreamReader:
     def read(self):
         data, addr = self.sock.recvfrom(1024)
         return data
-
         
 class SerialStreamReader():
 
@@ -63,7 +61,81 @@ class SerialStreamReader():
             except (OSError, serial.SerialException):
                 pass
         return result 
+
+
+class DummyStreamReader:
     
+    def __init__(self, mean_sleep=0.1, std_sleep=0.01, func1=math.sin, func2=math.cos):
+        self.mean_sleep = mean_sleep
+        self.std_sleep = std_sleep
+        self.func1 = func1
+        self.func2 = func2
+        self.port = 'DummyPort'
+
+    def read(self):
+        time.sleep(random.gauss(self.mean_sleep,self.std_sleep))
+        v1 = self.func1(time.time())
+        v2 = self.func2(time.time())
+        return str(v1) + ' ' + str(v2)
+
+
+class FileWriter:
+
+    def __init__(self, filename, starting_time=None, timed=True):
+        # check if data_path exists
+        # check if filename already exists
+        self.file = open(conf.data_path + filename,'a')
+
+        self.set_starting_time()
+        self.filename = filename
+        self.timed=timed
+
+    def set_starting_time(self,starting_time=None) :
+        if starting_time == None :
+            self.starting_time = time.time()
+        else :
+            self.starting_time = starting_time
+
+    def write(self,data):
+        if self.timed :
+            time_elapse = str(round((time.time()-starting_time) * 1000))
+            self.file.write(time_elapse + conf.delimiter + data)
+        else :
+            self.file.write(data)
+
+    def close(self):
+        self.file.close()
+
+    @classmethod
+    def construct_filename(cls,subject_id,record_number=None):
+
+        # add additional zeros 
+        if subject_id < 10 :
+            subject_id = '00' + str(subject_id)
+        elif :subject_id <= 100 :
+            subject_id = '0' + str(subject_id)
+        else :
+            subject_id = str(subject_id)
+
+        # find right file ending for data_delimiter
+        if conf.delimiter == ',' :
+            ending = '.csv'
+        elif conf.delimiter == '\t' :
+            ending = '.tsv'
+        elif conf.delimiter == ' ' :
+            ending = '.ssv'
+        else :
+            ending = '.dsv'
+
+        if record_number == None :
+            # find next record number 
+            record_number = 0
+        else :
+            #check for existing files
+            pass
+
+        return subject_id + '_' + str(record_number ) +'.' + ending
+
 
 class BufferedStreamReader:
     

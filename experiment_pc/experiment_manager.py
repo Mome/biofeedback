@@ -3,7 +3,10 @@
 # menubar.py 
 
 import sys
+import stream_manager
+
 from PyQt4 import QtGui, QtCore
+import pyqtgraph as pg
 
 class MainWindow(QtGui.QMainWindow):
 
@@ -36,16 +39,48 @@ class MainWindow(QtGui.QMainWindow):
         v.addAction(gsr)
         v.addAction(noise_filter)
 
-        
-class AnimatedPlotter :
+        # ---- for demostration ----
+        reader = stream_manager.DummyStreamReader()
+        bfs = stream_manager.BufferedStreamReader(reader)
+        # --------------------------
 
-    def __init__(self,title,bfs,lane,display_len=500,plot_type='quetsch') :
+        animated_plotter = AnimatedPlotter(bfs)
+        record = QtGui.QPushButton("Record")
+        record.setCheckable(True)
+        
+        top_box = QtGui.QHBoxLayout()
+        top_box.addWidget(animated_plotter)
+
+        bottom_box = QtGui.QHBoxLayout()
+        bottom_box.addStretch(1)
+        bottom_box.addWidget(record)
+
+        main_box = QtGui.QVBoxLayout()
+        main_box.addLayout(top_box)
+        main_box.addLayout(bottom_box)
+
+        main_widget = QtGui.QWidget()
+        main_widget.setLayout(main_box)
+        self.setCentralWidget(main_widget)
+
+        bfs.start()
+        animated_plotter.start()
+        print 'This is the end'
+
+        self.show()
+        
+        raw_input('enter to quit')
+        bfs.stop()
+
+
+class AnimatedPlotter(pg.PlotWidget):
+
+    def __init__(self,bfs,display_len=100,lane=0,plot_type='cont'):
+        pg.PlotWidget.__init__(self)
         self.bfs = bfs
         self.display_len=display_len
         self.lane = lane
         pg.setConfigOption('foreground', 'y')
-        self.window=pg.plot(title=title)
-        #print dir(self.window)
         if plot_type in ['cont','overflow'] :
             self.x = list(range(display_len))
             self.y = [0]*display_len
@@ -54,14 +89,13 @@ class AnimatedPlotter :
             self.y = [-1]
         self.plot_type = plot_type
         self.plot_index = 0
-        
 
     def update(self):
         data = self.bfs.read()
         data = [float(d.split()[self.lane]) for d in data]
         if self.plot_type=='cont':
             self.y.extend(data)
-            self.window.plot(self.x,self.y[-self.display_len:],clear=True)
+            self.plot(self.x,self.y[-self.display_len:],clear=True)
             for i in range(-len(data),0):
                 if min(self.y[i],self.y[i-1])!=-1 :
                     self.y[i]=(self.y[i]+self.y[i-1])/2
@@ -70,11 +104,11 @@ class AnimatedPlotter :
             for d in data :
                 self.y[self.plot_index]=d
                 self.plot_index = (self.plot_index+1)%self.display_len
-            self.window.plot(self.x,self.y,clear=True)
+            self.plot(self.x,self.y,clear=True)
         
         elif self.plot_type=='quetsch':
             self.y.extend(data)
-            self.window.plot(self.x[-len(self.y):],self.y,clear=True)
+            self.plot(self.x[-len(self.y):],self.y,clear=True)
             for i in range(-len(data),0):
                 if min(self.y[i],self.y[i-1])!=-1 :
                     self.y[i]=(self.y[i]+self.y[i-1])/2
@@ -83,10 +117,10 @@ class AnimatedPlotter :
         self.time=QtCore.QTimer()
         self.time.timeout.connect(self.update)
         self.time.start(60)
-
         
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
     main = MainWindow()
-    main.show()
+    #if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
+    #    QtGui.QApplication.instance().exec_()
     sys.exit(app.exec_())
