@@ -1,4 +1,5 @@
 import argparse
+import experiment_manager
 import math
 import os
 import random
@@ -154,8 +155,6 @@ class FileWriter:
                 os.mkdir(test_path)
                 print 'mkdir ' + test_path
 
-
-
 class TermWriter:
 
     def write(self, data):
@@ -191,8 +190,7 @@ class StreamManager:
 
 class BufferedPipe:
     
-    def __init__(self, stream_reader, buffer_size=1024):
-        self.stream_reader = stream_reader
+    def __init__(self, buffer_size=1024):
         self.buffer_size = buffer_size
         self.buffer=[0]*buffer_size
         self.index=0
@@ -325,17 +323,21 @@ def main():
 
 if __name__=='__main__':
     reader = DummyStreamReader()
+    
+    #t_writer = TermWriter()
+    #f_writer = FileWriter('pusemuckel')
+    buffered_pipe0  = BufferedPipe()
+    buffered_pipe1  = BufferedPipe()
+
     manager = StreamManager(reader)
-
-    t_writer = TermWriter()
-    f_writer = FileWriter('pusemuckel')
-
-    manager.addWriter(t_writer)
-    manager.addWriter(f_writer)
-
+    #manager.addWriter(t_writer)
+    #manager.addWriter(f_writer)
+    manager.addWriter(buffered_pipe0)
+    manager.addWriter(buffered_pipe1)
     manager.start()
-
-    raw_input()
+    experiment_manager.display_plotter_only(buffered_pipe0,0)
+    experiment_manager.display_plotter_only(buffered_pipe1,1)    
 
     manager.stop()
+    print 'zuende'
 

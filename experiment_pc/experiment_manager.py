@@ -4,6 +4,8 @@
 
 import sys
 import stream_manager
+import configurations as conf
+import threading
 
 from PyQt4 import QtGui, QtCore
 import pyqtgraph as pg
@@ -75,7 +77,7 @@ class MainWindow(QtGui.QMainWindow):
 
 class AnimatedPlotter(pg.PlotWidget):
 
-    def __init__(self,bfs,display_len=100,lane=0,plot_type='cont'):
+    def __init__(self,bfs,lane,display_len=100,plot_type='cont'):
         pg.PlotWidget.__init__(self)
         self.bfs = bfs
         self.display_len=display_len
@@ -92,7 +94,7 @@ class AnimatedPlotter(pg.PlotWidget):
 
     def update(self):
         data = self.bfs.read()
-        data = [float(d.split()[self.lane]) for d in data]
+        data = [float(d.split(conf.data_delimiter)[self.lane]) for d in data]
         if self.plot_type=='cont':
             self.y.extend(data)
             self.plot(self.x,self.y[-self.display_len:],clear=True)
@@ -117,10 +119,33 @@ class AnimatedPlotter(pg.PlotWidget):
         self.time=QtCore.QTimer()
         self.time.timeout.connect(self.update)
         self.time.start(60)
-        
+
+
+def display_plotter_only(buffered_pipe,lane):
+    print 1
+    app = QtGui.QApplication(sys.argv)
+    print 2
+    window = QtGui.QMainWindow()
+    print 3
+    window.resize(500, 500)
+    print 4
+    window.setWindowTitle('Biofeedback Plot')
+    print 5
+    animated_plotter = AnimatedPlotter(buffered_pipe,lane)
+    print 6
+    window.setCentralWidget(animated_plotter)
+    print 7
+    animated_plotter.start()
+    print 8
+    window.show()
+    print 9
+    app.exec_()
+    print 10
+    
+
 if __name__ == '__main__':
     app = QtGui.QApplication(sys.argv)
-    main = MainWindow()
+    main = QtGui.QMainWindow()
     #if (sys.flags.interactive != 1) or not hasattr(QtCore, 'PYQT_VERSION'):
     #    QtGui.QApplication.instance().exec_()
     sys.exit(app.exec_())
