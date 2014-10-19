@@ -1,5 +1,6 @@
 import argparse
 import math
+import os
 import random
 import serial
 import socket
@@ -76,19 +77,23 @@ class DummyStreamReader:
         time.sleep(random.gauss(self.mean_sleep,self.std_sleep))
         v1 = self.func1(time.time())
         v2 = self.func2(time.time())
-        return str(v1) + ' ' + str(v2)
+        return str(v1) + conf.data_delimiter + str(v2)
 
 
 class FileWriter:
 
-    def __init__(self, filename, starting_time=None, timed=True):
-        # check if data_path exists
-        # check if filename already exists
-        self.file = open(conf.data_path + filename,'a')
+    def __init__(self, filename, timed=True):
+        
+        FileWriter.check_and_create_data_path()
 
-        self.set_starting_time()
+        path = conf.data_path + filename
+        if os.path.exists(path) :
+            raise Exception('Datafile ' + path + ' already exists !')
+
+        self.file = open(conf.data_path + filename,'a')
         self.filename = filename
         self.timed=timed
+        self.set_starting_time()
 
     def set_starting_time(self,starting_time=None) :
         if starting_time == None :
@@ -98,10 +103,10 @@ class FileWriter:
 
     def write(self,data):
         if self.timed :
-            time_elapse = str(round((time.time()-starting_time) * 1000))
-            self.file.write(time_elapse + conf.delimiter + data)
+            time_elapse = str(int(round((time.time()-self.starting_time) * 1000)))
+            self.file.write(time_elapse + conf.data_delimiter + data + '\n')
         else :
-            self.file.write(data)
+            self.file.write(data + '\n')
 
     def close(self):
         self.file.close()
@@ -112,60 +117,92 @@ class FileWriter:
         # add additional zeros 
         if subject_id < 10 :
             subject_id = '00' + str(subject_id)
-        elif :subject_id <= 100 :
+        elif subject_id <= 100 :
             subject_id = '0' + str(subject_id)
         else :
             subject_id = str(subject_id)
 
         # find right file ending for data_delimiter
-        if conf.delimiter == ',' :
+        if conf.data_delimiter == ',' :
             ending = '.csv'
-        elif conf.delimiter == '\t' :
+        elif conf.data_delimiter == '\t' :
             ending = '.tsv'
-        elif conf.delimiter == ' ' :
+        elif conf.data_delimiter == ' ' :
             ending = '.ssv'
         else :
             ending = '.dsv'
 
         if record_number == None :
-            # find next record number 
+            #TODO find next record number 
             record_number = 0
         else :
-            #check for existing files
+            #TODO check for existing files
             pass
 
-        return subject_id + '_' + str(record_number ) +'.' + ending
+        return subject_id + '_' + str(record_number) +'.' + ending
+
+    @classmethod
+    def check_and_create_data_path(cls):
+        path = [p for p in conf.data_path.split('/') if p!='']
+        test_path = ''
+        for p in path :
+            test_path += '/' + p
+            if os.path.exists(test_path) :
+                if not os.path.isdir(test_path):
+                    raise Exception(test_path + ' already exists, but is a file !!')
+            else :
+                os.mkdir(test_path)
+                print 'mkdir ' + test_path
 
 
-class BufferedStreamReader:
+
+class TermWriter:
+
+    def write(self, data):
+        print data
+
+
+class StreamManager:
+
+    def __init__(self,stream_reader):
+        self.stream_reader = stream_reader
+        self.writers = []
+        self.is_running = False
+
+    def addWriter(self,writer):
+        self.writers.append(writer)
+
+    def start(self):
+        if self.is_running :
+            raise Exception('StreamManager already running!')
+        self.is_running = True
+        threading.Thread(target=self._run).start()
+        print 'StreamManager reading at port: ' + str(self.stream_reader.port) + ' !'
+
+    def _run(self) :
+        while self.is_running :
+            data = self.stream_reader.read()
+            for w in self.writers :
+                w.write(data)
+
+    def stop(self):
+        self.is_running = False
+
+
+class BufferedPipe:
     
     def __init__(self, stream_reader, buffer_size=1024):
         self.stream_reader = stream_reader
         self.buffer_size = buffer_size
         self.buffer=[0]*buffer_size
-        self.is_stopped=True
         self.index=0
-        
-    def start(self):
-        if not self.is_stopped :
-            print 'Already running!'
-        else :
-            self.is_stopped=False
-            threading.Thread(target=self._run).start()
-            print 'Reading at port: ' + str(self.stream_reader.port) + ' !'
 
-    def _run(self):
-        while not self.is_stopped:
-            data = self.stream_reader.read()
-            self.buffer[self.index]=data
-            self.index+=1
-            if self.index == self.buffer_size:
-                self.index = 0
-                print 'Buffer overflow!'
-        print 'BufferedStreamReader stopped!'
-    
-    def stop(self):
-        self.is_stopped=True
+    def write(self,data):
+        self.buffer[self.index]=data
+        self.index+=1
+        if self.index == self.buffer_size:
+            self.index = 0
+            print 'Buffer overflow!'
     
     def read(self):
         out = self.buffer[:self.index]
@@ -287,4 +324,18 @@ def main():
     
 
 if __name__=='__main__':
-    main()
+    reader = DummyStreamReader()
+    manager = StreamManager(reader)
+
+    t_writer = TermWriter()
+    f_writer = FileWriter('pusemuckel')
+
+    manager.addWriter(t_writer)
+    manager.addWriter(f_writer)
+
+    manager.start()
+
+    raw_input()
+
+    manager.stop()
+
