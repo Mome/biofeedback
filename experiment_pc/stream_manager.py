@@ -7,6 +7,9 @@ import sys
 import threading
 import time
 
+from pyqtgraph.Qt import QtGui, QtCore
+import numpy as np
+import pyqtgraph as pg
 import serial
 
 import configurations as conf
@@ -153,6 +156,56 @@ class TermWriter:
         print data
 
 
+class GraphicalWriter:
+    
+    def __init__(self, stream_buffer, lanes, data_buffer=100):
+        self.stream_buffer = stream_buffer
+        self.lanes = lanes
+        self.data_buffer = data_buffer
+        self.app = QtGui.QApplication([])
+        self.p = pg.plot()
+        self.p.setWindowTitle('Inlusio live-plot :)')
+        self.curve = self.p.plot()
+        self.index = 0
+        
+        if type(lanes) == int :
+            lanes=[lanes]
+        self.data = np.zeros((len(lanes),data_buffer))
+    
+    def update(self):
+        new_data = self.stream_buffer.read()
+        print new_data
+        if not new_data == [] :
+            new_data_len = len(new_data)
+            if self.data_buffer < new_data_len :
+                print 'rate is too damn high !!!'
+                new_data = new_data[databuffer:]
+            new_index = self.index+new_data_len
+            new_data = [data_point.split() for data_point in new_data]
+            new_data = np.array(new_data, dtype='float64').T
+            new_data = new_data[self.lanes,:]
+            
+            if new_index < self.data_buffer: 
+                self.data[:,self.index:self.index+new_data_len] = new_data
+            else :
+                #TODO fix shit man
+                new_data_cutoff = self.data_buffer-self.index-1
+                self.data[:,self.index:] = new_data[:,:new_data_cutoff]
+                new_index%=self.data_buffer
+                self.data[:,:new_index] = new_data[:,new_data_cutoff:]
+            #xdata = np.array(self.data)
+            #print self.data[0]
+            #raw_input()
+            self.curve.setData(self.data[0])
+            self.index = (self.index+new_data_len)%self.data_buffer
+        self.app.processEvents()
+    
+    def start(self):
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.update)
+        self.timer.start(16.6)
+
+
 class StreamManager:
 
     def __init__(self,stream_reader):
@@ -180,7 +233,7 @@ class StreamManager:
         self.is_running = False
 
 
-class BufferedPipe:
+class StreamBuffer:
     
     def __init__(self, buffer_size=1024):
         self.buffer_size = buffer_size

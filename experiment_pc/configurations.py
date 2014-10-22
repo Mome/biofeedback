@@ -1,7 +1,7 @@
 
 data_path = '~/inlusio_data/records'
 metadata_path = '~/inlusio_data/metadata'
-appdata_path = '~/biofeedback'
+appdata_path = '~/inlusio_data'
 data_delimiter = ','
 
 
