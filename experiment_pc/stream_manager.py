@@ -158,46 +158,48 @@ class TermWriter:
 
 class GraphicalWriter:
     
-    def __init__(self, stream_buffer, lanes, data_buffer=100):
-        self.stream_buffer = stream_buffer
+    def __init__(self, lanes, data_buffer_size=500, plot_type=1):
         self.lanes = lanes
-        self.data_buffer = data_buffer
+        self.data_buffer_size = data_buffer_size
+        self.plot_type = plot_type
         self.app = QtGui.QApplication([])
         self.p = pg.plot()
-        self.p.setWindowTitle('Inlusio live-plot :)')
+        #print dir(self.p)
+        self.p.setWindowTitle('Inlusio Live-Plot :)')
         self.curve = self.p.plot()
+        self.p.showGrid(True,True)
+        self.p.showButtons()
+        self.p.setMenuEnabled()
+        self.p.setYRange(-1.1,15,False)
+        self.p.setXRange(0,data_buffer_size,False)
+        print self.curve
         self.index = 0
         
         if type(lanes) == int :
             lanes=[lanes]
-        self.data = np.zeros((len(lanes),data_buffer))
+        self.data = np.zeros((len(lanes),data_buffer_size))
+    
+    def write(self,new_data):
+        new_data = np.array([float(d) for d in new_data.split()])
+        new_data = new_data[self.lanes]
+        self.data[:,self.index] = new_data
+        # silly noise reduction #
+        prev_index = (self.index-1)%self.data_buffer_size
+        self.data[:,prev_index] = (self.data[:,prev_index]*0.999 + self.data[:,self.index]*0.001)
+        # --------------------- #
+        self.index = (self.index+1)%self.data_buffer_size
     
     def update(self):
-        new_data = self.stream_buffer.read()
-        print new_data
-        if not new_data == [] :
-            new_data_len = len(new_data)
-            if self.data_buffer < new_data_len :
-                print 'rate is too damn high !!!'
-                new_data = new_data[databuffer:]
-            new_index = self.index+new_data_len
-            new_data = [data_point.split() for data_point in new_data]
-            new_data = np.array(new_data, dtype='float64').T
-            new_data = new_data[self.lanes,:]
+        plot_data = self.data[1]
+        if self.plot_type==0:
+            # silly vertical line #
+            # TODO
+            # ------------------- #
+            pass
+        elif self.plot_type==1:
+            plot_data = np.hstack([plot_data[self.index:],plot_data[:self.index]])
             
-            if new_index < self.data_buffer: 
-                self.data[:,self.index:self.index+new_data_len] = new_data
-            else :
-                #TODO fix shit man
-                new_data_cutoff = self.data_buffer-self.index-1
-                self.data[:,self.index:] = new_data[:,:new_data_cutoff]
-                new_index%=self.data_buffer
-                self.data[:,:new_index] = new_data[:,new_data_cutoff:]
-            #xdata = np.array(self.data)
-            #print self.data[0]
-            #raw_input()
-            self.curve.setData(self.data[0])
-            self.index = (self.index+new_data_len)%self.data_buffer
+        self.curve.setData(plot_data)
         self.app.processEvents()
     
     def start(self):

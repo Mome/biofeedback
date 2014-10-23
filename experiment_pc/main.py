@@ -81,12 +81,14 @@ if __name__=='__main__':
     #f_writer = stream_manager.FileWriter('pusemuckel')
     #manager.addWriter(f_writer)
     
-    stream_buffer = stream_manager.StreamBuffer()
-    manager.addWriter(stream_buffer)
-    graph = stream_manager.GraphicalWriter(stream_buffer, [0,1])
+    
+    graph = stream_manager.GraphicalWriter([0,1])
+    manager.addWriter(graph)
     graph.start()
     
     manager.start()
+    
+    
     
     # ------------------------------ #
     raw_input('Press ENTER to stop!!')
