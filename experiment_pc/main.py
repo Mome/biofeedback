@@ -70,8 +70,8 @@ def main():
     
 
 if __name__=='__main__':
-    #reader = DummyStreamReader()
-    reader = stream_manager.SerialStreamReader('COM9')
+    reader = stream_manager.DummyStreamReader()
+    #reader = stream_manager.SerialStreamReader('COM9')
 
     manager = stream_manager.StreamManager(reader)
     
@@ -82,7 +82,7 @@ if __name__=='__main__':
     #manager.addWriter(f_writer)
     
     
-    graph = stream_manager.GraphicalWriter([0,1])
+    graph = stream_manager.GraphicalWriter([1,0])
     manager.addWriter(graph)
     graph.start()
     

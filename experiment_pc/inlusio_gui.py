@@ -75,11 +75,25 @@ class MainWindow(QtGui.QMainWindow):
         bfs.stop()
 
 
+def create_plotter_only(buffered_pipe):
+    app = QtGui.QApplication(sys.argv)
+    main = MainWindow()
+    self.resize(700, 500)
+    self.setWindowTitle('Biofeedback Plot')
+    plotter = AnimatedPlotter(buffered_pipe
+    sys.exit(app.exec_())
+
+
+
 class AnimatedPlotter(pg.PlotWidget):
 
+<<<<<<< Updated upstream:experiment_pc/inlusio_gui.py
     def __init__(self,bfs,lane,display_len=100,plot_type='cont'):
+=======
+    def __init__(self,buffered_pipe,display_len=100,lane=0,plot_type='cont'):
+>>>>>>> Stashed changes:experiment_pc/experiment_manager.py
         pg.PlotWidget.__init__(self)
-        self.bfs = bfs
+        self.buffered_pipe = buffered_pipe
         self.display_len=display_len
         self.lane = lane
         pg.setConfigOption('foreground', 'y')
@@ -93,8 +107,13 @@ class AnimatedPlotter(pg.PlotWidget):
         self.plot_index = 0
 
     def update(self):
+<<<<<<< Updated upstream:experiment_pc/inlusio_gui.py
         data = self.bfs.read()
         data = [float(d.split(conf.data_delimiter)[self.lane]) for d in data]
+=======
+        data = self.buffered_pipe.read()
+        data = [float(d.split()[self.lane]) for d in data]
+>>>>>>> Stashed changes:experiment_pc/experiment_manager.py
         if self.plot_type=='cont':
             self.y.extend(data)
             self.plot(self.x,self.y[-self.display_len:],clear=True)

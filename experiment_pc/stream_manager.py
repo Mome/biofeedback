@@ -1,3 +1,4 @@
+import itertools
 import math
 import os
 import random
@@ -72,18 +73,38 @@ class SerialStreamReader():
 
 class DummyStreamReader:
     
-    def __init__(self, mean_sleep=0.1, std_sleep=0.01, func1=math.sin, func2=math.cos):
-        self.mean_sleep = mean_sleep
-        self.std_sleep = std_sleep
-        self.func1 = func1
-        self.func2 = func2
+    def __init__(self, mean_sleep=0.1, std_sleep=0.001, funcs=['ecg','sin']):
+        print 'DummyStreamReader INITIALIZED !!!'
         self.port = 'DummyPort'
 
+        for i,func in enumerate(funcs) :
+            if func == 'ecg':
+                mean_sleep = 0.0078125 #128Hz
+                # reads lines from ecg file, puts it in an iterator and converts it to a function
+                ecg_data_path = conf.module_path + os.sep + '..' + os.sep + 'data' + os.sep + 'sample_data' + os.sep + 'ecg_sample.csv'
+                with open(ecg_data_path) as csv_file :
+                    ecg_data=[float(line.strip()) for line in csv_file.readlines() if line.strip()!='' and line.strip()[0]!='#']
+                    ecg_iter = itertools.cycle(ecg_data)
+                    funcs[i] = lambda _ : ecg_iter.next()
+            elif func == 'sin':
+                funcs[i] = math.sin
+            elif func == 'cos' :
+                funcs[i] = math.cos
+            else :
+                funcs[i] = lambda _ : 1
+
+        self.mean_sleep = math.log(mean_sleep) + (std_sleep)**2
+        print self.mean_sleep
+        self.std_sleep = std_sleep
+        self.funcs = funcs
+
     def read(self):
-        time.sleep(random.gauss(self.mean_sleep,self.std_sleep))
-        v1 = self.func1(time.time())
-        v2 = self.func2(time.time())
-        return str(v1) + conf.data_delimiter + str(v2)
+        #print random.lognormvariate(self.mean_sleep,self.std_sleep)
+        time.sleep(random.lognormvariate(self.mean_sleep,self.std_sleep))
+        out_str = ''
+        for func in self.funcs :
+            out_str +=str(func(time.time())) + conf.data_delimiter
+        return out_str[:-1]
 
 
 class FileWriter:
@@ -158,7 +179,7 @@ class TermWriter:
 
 class GraphicalWriter:
     
-    def __init__(self, lanes, data_buffer_size=500, plot_type=1):
+    def __init__(self, lanes, data_buffer_size=3000, plot_type=0):
         self.lanes = lanes
         self.data_buffer_size = data_buffer_size
         self.plot_type = plot_type
@@ -170,7 +191,7 @@ class GraphicalWriter:
         self.p.showGrid(True,True)
         self.p.showButtons()
         self.p.setMenuEnabled()
-        self.p.setYRange(-1.1,15,False)
+        self.p.setYRange(-1.1,8000,False)
         self.p.setXRange(0,data_buffer_size,False)
         print self.curve
         self.index = 0
@@ -184,8 +205,8 @@ class GraphicalWriter:
         new_data = new_data[self.lanes]
         self.data[:,self.index] = new_data
         # silly noise reduction #
-        prev_index = (self.index-1)%self.data_buffer_size
-        self.data[:,prev_index] = (self.data[:,prev_index]*0.999 + self.data[:,self.index]*0.001)
+        #prev_index = (self.index-1)%self.data_buffer_size
+        #self.data[:,prev_index] = (self.data[:,prev_index]*0.999 + self.data[:,self.index]*0.001)
         # --------------------- #
         self.index = (self.index+1)%self.data_buffer_size
     

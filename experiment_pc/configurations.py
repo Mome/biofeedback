@@ -2,7 +2,9 @@
 data_path = '~/inlusio_data/records'
 metadata_path = '~/inlusio_data/metadata'
 appdata_path = '~/inlusio_data'
-data_delimiter = ','
+data_delimiter = ' '
+
+
 
 
 # ---------------- RESOLVE PATHS ---------------- #
@@ -13,5 +15,7 @@ metadata_path = os.path.expanduser(metadata_path)
 metadata_path = os.path.normpath(metadata_path)
 appdata_path = os.path.expanduser(appdata_path)
 appdata_path = os.path.normpath(appdata_path)
+module_path = os.path.dirname(os.path.abspath(__file__))
+module_path = os.path.normpath(module_path)
 del os
 # ----------------------------------------------- #
