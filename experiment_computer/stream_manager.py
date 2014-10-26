@@ -193,21 +193,27 @@ class TermWriter:
 
 class GraphicalWriter:
     
-    def __init__(self, lanes, data_buffer_size=3000, plot_type=0):
+    def __init__(self, lanes, data_buffer_size=3000, plot_type=1):
         self.lanes = lanes
         self.data_buffer_size = data_buffer_size
         self.plot_type = plot_type
         self.app = QtGui.QApplication([])
-        self.p = pg.plot()
-        #print dir(self.p)
-        self.p.setWindowTitle('Inlusio Live-Plot :)')
-        self.curve = self.p.plot()
-        self.p.showGrid(True,True)
-        self.p.showButtons()
-        self.p.setMenuEnabled()
-        self.p.setYRange(-1.1,8000,False)
-        self.p.setXRange(0,data_buffer_size,False)
-        print self.curve
+
+        self.plots = []
+        self.curves = []
+        self.indices = []
+
+        for l in lanes :
+            p = pg.plot()
+            p.setWindowTitle('Inlusio Live-Plot: ' + str(l))
+            p.showGrid(True,True)
+            p.showButtons()
+            p.setMenuEnabled()
+            #p.setYRange(-1.1,8000,False)
+            #p.setXRange(0,data_buffer_size,False)
+            self.plots.append(p)
+            self.curves.append(p.plot())
+        
         self.index = 0
         
         if type(lanes) == int :
@@ -215,7 +221,7 @@ class GraphicalWriter:
         self.data = np.zeros((len(lanes),data_buffer_size))
     
     def write(self,new_data):
-        new_data = np.array([float(d) for d in new_data.split()])
+        new_data = np.array([float(d) for d in new_data.split(conf.data_delimiter)])
         new_data = new_data[self.lanes]
         self.data[:,self.index] = new_data
         # silly noise reduction #
@@ -225,17 +231,15 @@ class GraphicalWriter:
         self.index = (self.index+1)%self.data_buffer_size
     
     def update(self):
-        plot_data = self.data[1]
-        if self.plot_type==0:
-            # silly vertical line #
-            # TODO
-            # ------------------- #
-            pass
-        elif self.plot_type==1:
-            plot_data = np.hstack([plot_data[self.index:],plot_data[:self.index]])
+
+        for l in range(len(self.lanes)) :
+            plot_data = self.data[l]
             
-        self.curve.setData(plot_data)
-        self.app.processEvents()
+            if self.plot_type==1:
+                plot_data = np.hstack([plot_data[self.index:],plot_data[:self.index]])
+                
+            self.curves[l].setData(plot_data)
+            self.app.processEvents()
     
     def start(self):
         self.timer = QtCore.QTimer()

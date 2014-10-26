@@ -55,7 +55,9 @@ def main():
         manager.addWriter(t_writer)
 
     if 'graphical' in args.output :
-        pass
+        graph = stream_manager.GraphicalWriter([1,0])
+        manager.addWriter(graph)
+        graph.start()
 
     if 'file' in args.output :
 
@@ -92,8 +94,6 @@ def main():
 
     manager.start()
     
-    
-    
     # ------------------------------ #
     raw_input('Press ENTER to stop!!')
     # ------------------------------ #
@@ -103,30 +103,3 @@ def main():
 
 if __name__=='__main__':
     main()
-    exit()
-    reader = stream_manager.DummyStreamReader()
-    #reader = stream_manager.SerialStreamReader('COM9')
-
-    manager = stream_manager.StreamManager(reader)
-    
-    #t_writer = stream_manager.TermWriter()
-    #manager.addWriter(t_writer)
-    
-    #f_writer = stream_manager.FileWriter('pusemuckel')
-    #manager.addWriter(f_writer)
-    
-    
-    graph = stream_manager.GraphicalWriter([1,0])
-    manager.addWriter(graph)
-    graph.start()
-    
-    manager.start()
-    
-    
-    
-    # ------------------------------ #
-    raw_input('Press ENTER to stop!!')
-    # ------------------------------ #
-    
-    manager.stop()
-    print 'zuende'
