@@ -74,7 +74,6 @@ class SerialStreamReader():
 class DummyStreamReader:
     
     def __init__(self, mean_sleep=0.1, std_sleep=0.001, funcs=['ecg','sin']):
-        print 'DummyStreamReader INITIALIZED !!!'
         self.port = 'DummyPort'
 
         for i,func in enumerate(funcs) :
@@ -94,7 +93,7 @@ class DummyStreamReader:
                 funcs[i] = lambda _ : 1
 
         self.mean_sleep = math.log(mean_sleep) + (std_sleep)**2
-        print self.mean_sleep
+        #print self.mean_sleep
         self.std_sleep = std_sleep
         self.funcs = funcs
 
@@ -162,13 +161,28 @@ class FileWriter:
             ending = '.dsv'
 
         if record_number == None :
-            #TODO find next record number 
-            record_number = 0
-        else :
-            #TODO check for existing files
-            pass
+            file_list = os.listdir(conf.data_path)
+            file_list = [f[4:-4] for f in file_list if f.startswith(subject_id)]
+            file_list = [int(f) for f in file_list if f.isdigit()]
+            if file_list == [] :
+                record_number = 0
+            else :
+                record_number = max(file_list)+1
 
-        return subject_id + '_' + str(record_number) +'.' + ending
+        # add additional zeros 
+        if record_number < 10 :
+            record_number = '00' + str(record_number)
+        elif record_number <= 100 :
+            record_number = '0' + str(record_number)
+        else :
+            record_number = str(record_number)
+        
+        file_name = subject_id + '_' + record_number + ending
+
+        #if os.path.exists(file_ path) :
+        #    raise Exception('File already exists. Wont overwrite data!')
+
+        return file_name
 
 
 class TermWriter:
