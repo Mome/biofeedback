@@ -184,6 +184,21 @@ class FileWriter:
 
         return file_name
 
+class RamWriter:
+
+    def __init__(self, data, maximum):
+        self.ram = [None]*maximum
+        self.index = 0
+
+    def write(self, data):
+        try :
+            self.ram[self.index] = data
+            self.index += 1
+        except :
+            return False
+        return True
+
+
 
 class TermWriter:
 
