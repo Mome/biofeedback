@@ -208,7 +208,7 @@ class TermWriter:
 
 class GraphicalWriter:
     
-    def __init__(self, lanes, data_buffer_size=3000, plot_type=1):
+    def __init__(self, lanes, data_buffer_size=500, plot_type=1):
         self.lanes = lanes
         self.data_buffer_size = data_buffer_size
         self.plot_type = plot_type
@@ -224,8 +224,9 @@ class GraphicalWriter:
             p.showGrid(True,True)
             p.showButtons()
             p.setMenuEnabled()
-            #p.setYRange(-1.1,8000,False)
-            #p.setXRange(0,data_buffer_size,False)
+            if l == 1 :
+                p.setYRange(-1.1,15,False)
+                p.setXRange(0,data_buffer_size,False)
             self.plots.append(p)
             self.curves.append(p.plot())
         
@@ -241,7 +242,7 @@ class GraphicalWriter:
         self.data[:,self.index] = new_data
         # silly noise reduction #
         #prev_index = (self.index-1)%self.data_buffer_size
-        #self.data[:,prev_index] = (self.data[:,prev_index]*0.999 + self.data[:,self.index]*0.001)
+        # self.data[:,self.index] = (self.data[:,prev_index]*0.9 + self.data[:,self.index]*0.1)
         # --------------------- #
         self.index = (self.index+1)%self.data_buffer_size
     

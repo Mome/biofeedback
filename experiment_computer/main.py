@@ -27,7 +27,7 @@ def main():
         for i in num :
             args.output.append(choices[int(i)-1])
     
-    if args.port==None and args.input=='serial' :
+    if args.port==None and args.input=='arduino' :
         ports = stream_manager.SerialStreamReader.list_serial_ports()
         print 'Available ports:', ports
         if len(ports) > 1 :
@@ -43,7 +43,7 @@ def main():
 
     if args.input == 'raspi':
         reader = stream_manager.UdpStreamReader(args.port)      
-    elif args.input == 'serial' :
+    elif args.input == 'arduino' :
         reader = stream_manager.SerialStreamReader(args.port)
     elif args.input == 'dummy':
         reader = stream_manager.DummyStreamReader()

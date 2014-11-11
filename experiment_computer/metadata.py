@@ -66,3 +66,6 @@ class Subject:
         yaml_code = yaml.dump(d,allow_unicode=True,default_flow_style=False)
         with open(self.file_path,'w') as f:
             f.write(yaml_code)
+
+ 
+ 
