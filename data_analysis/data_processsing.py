@@ -1,13 +1,14 @@
+from __future__ import division
 import calendar
 import time
-from copy import copy
-
 
 from pylab import *
 from numpy import gradient
 import yaml
 
 import rpeakdetect as peak
+
+distances = lambda a : array([0]+[a[i+1]-a[i] for i in xrange(len(a)-1)])
 
 def load_data(path):
     with open(path) as csv_file:
@@ -36,7 +37,6 @@ def convert_time_array(time_array):
     #print 'commatest',out[0] - int(out[0])
     return out
 
-
 def align_times(start_times, relative_times):
     start_times = array(start_times, dtype='float64')
     relative_times = copy(relative_times)
@@ -48,14 +48,37 @@ def align_times(start_times, relative_times):
 
 
 def low_pass(signal, kernel_type, kernel_size):
+    N = kernel_size
+
     if kernel_type == 'rect':
-        kernel = 1.0/kernel_size * ones(kernel_size)
+        kernel = 1.0/N * ones(N)
+
     elif kernel_type == 'cos':
-	N = kernel_size
+        N = kernel_size
         kernel = 0.5*(1-cos(2*pi*arange(N)/(N-1)))
+
+    elif kernel_type == 'turkey':
+
+        def turkey(n,N,alpha) :
+            bound_1 = alpha*(N-1)/2
+            bound_2 = (N-1)*(1-alpha/2)
+            if 0 <= n < bound_1 :
+                return (1/2)*(1+cos(pi*(2*n/(alpha*(N-1))-1)))
+            elif bound_1 <= n <= bound_2 :
+                return 1.0
+            elif bound_2 < n <= N-1 :
+                return (1/2)*(1+cos(pi*(2*n/(alpha*(N-1))-alpha/2+1)))
+            else :
+                return 0
+
+        turkey = vectorize(turkey)
+        #kernel = turkey()
     else :
         raise Exception('No such kernel: ' + kernel_type) 
-    return convolve(signal, kernel, mode='same')
+    out = convolve(signal, kernel, mode='same')
+    factor = sum(signal)/sum(out)
+    
+    return out*factor
 
 
 def median_filter(signal):
@@ -65,12 +88,102 @@ def median_filter(signal):
         z[i-1] = m
     return z
 
+def baseline_adaption(signal, filter_size):
+    baseline = low_pass(signal, 'cos', filter_size)
+    return 
+
+def process_ecg(signal):
+    pulse = None
+    return pulse
+
+def divide_into_epoches(criterium_tup, data_tup):
+    #criterium_indices = where(criterium_data[1] == criterium)[0]
+    #criterium_times = array(criterium_indices, criterium_data[0])
+
+    criterium_times = criterium_tup[0]
+    criterium = criterium_tup[1]
+    data_times = data_tup[0][data_tup[0] > criterium_times[0]]
+    data = data_tup[1]
+    print data_times
+    print data_tup[0]
+    print data_tup[1]
+
+    epoch_dict = {}
+    d_index = 0
+    for ct_index in xrange(len(criterium_times)-1):
+        tmp_times = []
+        tmp_data = []
+        while criterium_times[ct_index+1] >= data_times[d_index] :
+            tmp_times.append(data_times[d_index])
+            tmp_data.append(data[d_index])
+            d_index+=1
+            if d_index == len(data_times):
+                break
+        c = criterium[ct_index]
+        if c not in epoch_dict.keys() :
+            epoch_dict[c] = []
+        epoch_dict[c].append((tmp_times,tmp_data))
+        # what for criterium_times[ct_index] == data_times[d_index] ???
+
+    return epoch_dict
+
+        
+def plot_with_background_color(x_axis_divisions,colors, graph_data):
+    import matplotlib.pyplot as plt
+    import matplotlib.collections as collections
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111)
+
+    # Plot your own data here
+    ax.plot(graph_data[0], graph_data[1])
+
+    xad = list(copy(x_axis_divisions))
+    #xad.append(graph_data[0][-1])
+    xranges = [(xad[i],xad[i+1]-xad[i]) for i in xrange(len(xad)-1)]
+    yrange = (0, 3)
+    print(len(xranges))
+
+    def color_choice(color_code):
+        if color_code == 0:
+            return 'white'
+        elif color_code == 1:
+            return 'green'
+        elif color_code == 2:
+            return 'red'
+        else :
+            return 'blue'
+
+    colors = [color_choice(color_code) for color_code in colors]
+
+    for i in xrange(len(xranges)) :
+        print '[xranges[i]]', [xranges[i]], 'bla'
+        coll = collections.BrokenBarHCollection([xranges[i]], yrange, facecolor=colors[i], alpha=0.5)
+        ax.add_collection(coll)
+
+    plt.show()
+
+
+def process_gsr(signal):
+    front_cut_off = 300
+
+    filtered_signal = low_pass(signal,'cos',5000)
+
+    baseline = None
+    
+    grad = gradient(filtered_signal)
+
+    filtered_grad = None#low_pass(grad, 'cos', 10000)
+
+    return filtered_signal, grad, filtered_grad,baseline
+
+
 def process_data(data_path='../data/trail_data/'):
 
     if not data_path.endswith('/'):
         data_path += '/'
 
-    subject_id = '103'
+    subject_id = '102'
     record_number = '000'
 
     record_file_name = str(subject_id) + '_' + str(record_number) + '.csv'
@@ -91,6 +204,7 @@ def process_data(data_path='../data/trail_data/'):
 
     # get physiotimes and convert to seconds
     physio_times = array(data[0], dtype='float64')/1000.0
+    sample_rate = None
 
     # occulus data
     path = data_path + str(subject_id) + '/Parameters.csv'
@@ -126,88 +240,58 @@ def process_data(data_path='../data/trail_data/'):
     align_times((physio_times_start,p_times_start,tea_times_start,ts_times_start),\
         [physio_times,p_times,tea_times,ts_times])
 
-    # time data tuples
+    # (time,data) tuples
     ecg_data = (physio_times,data[1])
     gsr_data = (physio_times,data[2])
     conditions = (p_times,parameters[8])
     success = (p_times,parameters[9])
     status = (ts_times,trail_stessors[3])
 
-    print physio_times_start, p_times_start, tea_times_start, ts_times_start
-    raw_input()
-    figure()
-    plot(ecg_data[0],ecg_data[1])
+    # process physio data
+    pulse = process_ecg(ecg_data[1])
+    gsr_f, gsr_g, gsr_f_g, gsr_b = process_gsr(gsr_data[1])
+
+    filtered_gsr_data = (physio_times,gsr_f)
+
+
+    #divide_into_epoches(conditions,filtered_gsr_data)
+    plot_with_background_color()
+
     #figure()
-    plot(gsr_data[0],gsr_data[1])
+    #plot(ecg_data[0],ecg_data[1])
     #figure()
-    step(conditions[0],conditions[1])
+    #plot(gsr_data[0],gsr_f)
     #figure()
-    step(success[0],success[1])
+    #step(trail_type_p[0],trail_type_p[1])
     #figure()
-    step(status[0],status[1])
+    #figure()
+    #step(status[0],status[1])
     show()
-
-
 
 
 if __name__ == '__main__' :
     gsr = False
     ecg = False
     time_ = False
-    munis_data = False 
     process = True
 
     if process :
         process_data()
 
-    #data = load_data('../data/trail_data/102/Parameters.csv')
     path = '../data/trail_data/records/102_000.csv'
     data = load_data(path)
-    if munis_data :
-        path = '../data/trail_data/103/Parameters.csv'
-        parameters = load_data(path)
-        path = '../data/trail_data/102/Trial-Error-Angles.csv'
-        te_angles = load_data(path)
-        path = '../data/trail_data/102/Trial-Stressors.csv'
-        trail_stessors = load_data(path)
-
-        p_times = convert_time_array(parameters[0])
-        tea_times = convert_time_array(te_angles[0])
-        ts_times = convert_time_array(trail_stessors[0])
-
-        p_times_start = p_times[0]
-        tea_times_start = tea_times[0]
-        ts_times_start = ts_times[0]
-
-        p_times = append([0],gradient(p_times))
-        tea_times = append([0],gradient(tea_times))
-        ts_times = append([0],gradient(ts_times))
-        
-        conditions = (p_times,parameters[8])
-        success = (p_times,parameters[9])
-        status = (ts_times,trail_stessors[3])
         
     if time_ :
         time_data = data[0]
         plot(gradient(time_data[10000:10100]))
         print mean(gradient(time_data[1000:-1000]))
     if gsr :
-        s = 1000
-        e = -1000
-        gsr_data = data[2]
-        data_filtered = low_pass(gsr_data,'cos',1000)
-        grad = gradient(data_filtered)
-        grad_filtered = low_pass(grad, 'cos', 10000)
-        plot(gsr_data[s:e])
+        f,g,gf = process_gsr(data[2])
         figure()
-        plot(data_filtered[s:e])
+        plot(data[2])
         figure()
-        plot(grad[s:e])
-        half = int(len(grad)/2)
-        s1 = sum(grad[s:half])
-        s2 = sum(grad[half:e])
-        print 'first',s1, ' second',s2
-        print 'ratio', s1/s2
+        plot(f)
+        show()
     if ecg :
         ecg_data = data[1]
         ecg_data = ecg_data[500:-1]
@@ -222,6 +306,3 @@ if __name__ == '__main__' :
         print 'heard rate:', mean(peak_distance) 
         print 'heard rate first half:', mean(peak_distance[0:int(len(peak_distance)/2)])
         print 'heard rate second half:', mean(peak_distance[int(len(peak_distance)/2):-1])
- 
-
-    #distances = lambda a : array([0]+[a[i+1]-a[i] for i in xrange(len(a)-1)])
