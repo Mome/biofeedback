@@ -1,0 +1,14 @@
+comment: ''
+records:
+- column_1: relative_time
+  column_2: ecg
+  column_3: gsr
+  comment: ''
+  file_name: 103_000.csv
+  marker: false
+  number: 0
+  sample_rate: 100Hz
+  session: 1
+  source: arduino
+  start_time: 1415783471.467
+subject_id: 103

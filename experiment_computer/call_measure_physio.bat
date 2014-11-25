@@ -1,0 +1,1 @@
+python main.py -p COM9 --input arduino --output graphical terminal

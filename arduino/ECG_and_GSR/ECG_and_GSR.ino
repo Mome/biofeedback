@@ -10,11 +10,11 @@ void loop() {
   float ECG = eHealth.getECG();
   float conductance = eHealth.getSkinConductance();
 
-  Serial.print(ECG, 2);
-  Serial.print(" ");
-  Serial.print(conductance, 2); 
+  Serial.print(ECG, 3);
+  Serial.print(",");
+  Serial.print(conductance, 3); 
   Serial.print("\n");
 
-  delay(50);
+  delay(10);
 }
 
