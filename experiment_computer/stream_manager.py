@@ -136,15 +136,16 @@ class FileWriter:
         self.file.close()
 
     @classmethod
-    def construct_filepath(cls,subject_id,record_number=None):
+    def construct_filepath(cls,subject_id,session,record_number=None):
 
         # add additional zeros 
-        if subject_id < 10 :
+        """if subject_id < 10 :
             subject_id = '00' + str(subject_id)
         elif subject_id <= 100 :
             subject_id = '0' + str(subject_id)
-        else :
-            subject_id = str(subject_id)
+        else : """
+        
+        subject_id = str(subject_id)
 
         # find right file ending for data_delimiter
         if conf.data_delimiter == ',' :
@@ -166,14 +167,15 @@ class FileWriter:
                 record_number = max(file_list)+1
 
         # add additional zeros 
-        if record_number < 10 :
+        """if record_number < 10 :
             record_number = '00' + str(record_number)
         elif record_number <= 100 :
             record_number = '0' + str(record_number)
-        else :
-            record_number = str(record_number)
+        else :"""
         
-        filename = 'physio_record_' + subject_id + '_' + record_number + ending
+        record_number = str(record_number)
+        
+        filename = 'physio_record_' + subject_id + '_' + str(session) + '_' + record_number + ending
         
         folder_path = os.path.normpath(conf.data_path + '/subject_' + str(subject_id))
         

@@ -82,7 +82,7 @@ def main():
         subject = metadata.Subject(subject_id)
         record_number = subject.get_next_record_number()
 
-        filepath = stream_manager.FileWriter.construct_filepath(subject_id,record_number)
+        filepath = stream_manager.FileWriter.construct_filepath(subject_id,session,record_number)
 
         f_writer = stream_manager.FileWriter(filepath)
         manager.addWriter(f_writer)
