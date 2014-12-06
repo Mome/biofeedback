@@ -1,3 +1,4 @@
+import glob
 import itertools
 import math
 import os
@@ -8,9 +9,10 @@ import sys
 import threading
 import time
 
-from pyqtgraph.Qt import QtGui, QtCore
+
 import numpy as np
 import pyqtgraph as pg
+from pyqtgraph.Qt import QtGui, QtCore
 import serial
 
 import configurations as conf
@@ -136,7 +138,7 @@ class FileWriter:
         self.file.close()
 
     @classmethod
-    def construct_filepath(cls,subject_id,session,record_number=None):
+    def construct_filepath(cls, subject_id, session, record_number=None):
 
         # add additional zeros 
         """if subject_id < 10 :
