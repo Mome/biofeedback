@@ -9,7 +9,11 @@ default_raspi_port = 49152
 default_sample_rate = '100Hz'
 metadata_file_prefix = 'physio_meta'
 
+win_port_id_1 = 'USB Serial Port (COM9)'
+win_port_id_2 = 'FTDIBUS\\VID_0403+PID_6001+A900ABVGA\\0000'
 
+linux_port_id_1 = 'Future Technology Devices International, Ltd FT232 USB-Serial (UART) IC '
+linux_port_id_2 = 'USB VID:PID=0403:6001 SNR=A900abvG'
 
 
 # ---------------- RESOLVE PATHS ---------------- #

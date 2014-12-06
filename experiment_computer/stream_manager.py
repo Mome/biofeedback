@@ -9,15 +9,14 @@ import sys
 import threading
 import time
 
-
 import numpy as np
 try :
     import pyqtgraph as pg
     from pyqtgraph.Qt import QtGui, QtCore
 except ImportError as ie:
     print 'Print Graphical Plotting not possible :', str(ie)
-import serial
-from serial.tool.list_ports import comports as list_comports
+from serial import Serial, SerialException
+from serial.tools.list_ports import comports as list_comports
 
 import configurations as conf
 
@@ -36,33 +35,58 @@ class UdpStreamReader:
 
 class SerialStreamReader():
 
-    def __init__(self, port, baud=115200):    
+    def __init__(self, port, baud=115200):
         self.port = port
         self.baud = baud
-        self.ser = serial.Serial(port, baud)
         self.sleeping_time = 0.1
-        self.disconnected = False
+        self.reconnect()
     
     def read(self): 
         
-       try :
+        try :
             return self.ser.readline().strip()
         except SerialException :
-            if not self.disconnected :
-                print 'Serial disconnected'
+            print 'Serial disconnected'
+            reconnect()
+            return self.ser.readline().strip()
+    
+    def reconnect(self):
+    
+        if self.port != 'auto' :
+            try :
+                self.ser = Serial(self.port, self.baud)
+                return
+            except SerialException:
+                print 'Cannot connect to old port !'
+        
+        port = self.autochoose_port()
+        print 'waiting for reconnect'
+        while port == None :
+            port = self.autochoose_port()
+            time.sleep(self.sleep_time)
+        self.port = port
+        self.ser = Serial(self.port, self.baud)
+        print 'reconnected !'
     
     def autochoose_port(self):
-	
+        
         if sys.platform.startswith('linux') :
-            os = 'linux'
+            target_port_id = (conf.linux_port_id_1, conf.linux_port_id_2)
         elif sys.platform.startswith('win') :
-            os = 'win'
+            target_port_id = (conf.win_port_id_1, conf.win_port_id_2)
         else :
             print 'Port autochoose not supported for', os.platform
         
+        target_port = None
+        
         for port, port_id_1, port_id_2  in list_comports() :
-            if os == 'linux' : 
-                pass
+            if (port_id_1, port_id_2) == target_port_id :
+                target_port = port
+                break
+        
+        return target_port
+        
+        
             
             
             
@@ -93,10 +117,10 @@ class SerialStreamReader():
         result = []
         for port in ports:
             try:
-                s = serial.Serial(port)
+                s = Serial(port)
                 s.close()
                 result.append(port)
-            except (OSError, serial.SerialException):
+            except (OSError, SerialException):
                 pass
         return result 
 
