@@ -108,18 +108,14 @@ class DummyStreamReader:
 
 class FileWriter:
 
-    def __init__(self, filename, timed=True):
+    def __init__(self, filepath, timed=True):
         
-        if not os.path.exists(conf.data_path) :
-            os.makedirs(conf.data_path)
-        
-        path = os.path.normpath(conf.data_path + '/' + filename)
-        
-        if os.path.exists(path) :
-            raise Exception('Datafile ' + path + ' already exists !')
+        # dont know if I still need that #
+        if os.path.exists(filepath) :
+            raise Exception('Datafile ' + filepath + ' already exists !')
 
-        self.file = open(path,'a')
-        self.filename = filename
+        self.file = open(filepath,'a')
+        self.filepath = filepath
         self.timed=timed
         self.set_starting_time()
 
@@ -140,7 +136,7 @@ class FileWriter:
         self.file.close()
 
     @classmethod
-    def construct_filename(cls,subject_id,record_number=None):
+    def construct_filepath(cls,subject_id,record_number=None):
 
         # add additional zeros 
         if subject_id < 10 :
@@ -177,13 +173,21 @@ class FileWriter:
         else :
             record_number = str(record_number)
         
-        file_name = subject_id + '_' + record_number + ending
-
+        filename = 'physio_record_' + subject_id + '_' + record_number + ending
+        
+        folder_path = os.path.normpath(conf.data_path + '/subject_' + str(subject_id))
+        
+        if not os.path.exists(folder_path) :
+            os.makedirs(folder_path)
+        
+        filepath =  folder_path + '/' + filename
+        
         #if os.path.exists(file_ path) :
         #    raise Exception('File already exists. Wont overwrite data!')
 
-        return file_name
-
+        return filepath
+        
+        
 class RamWriter:
 
     def __init__(self, data, maximum):
@@ -197,7 +201,6 @@ class RamWriter:
         except :
             return False
         return True
-
 
 
 class TermWriter:
