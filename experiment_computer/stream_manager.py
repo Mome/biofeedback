@@ -11,9 +11,13 @@ import time
 
 
 import numpy as np
-import pyqtgraph as pg
-from pyqtgraph.Qt import QtGui, QtCore
+try :
+    import pyqtgraph as pg
+    from pyqtgraph.Qt import QtGui, QtCore
+except ImportError as ie:
+    print 'Print Graphical Plotting not possible :', str(ie)
 import serial
+from serial.tool.list_ports import comports as list_comports
 
 import configurations as conf
 
@@ -36,10 +40,34 @@ class SerialStreamReader():
         self.port = port
         self.baud = baud
         self.ser = serial.Serial(port, baud)
+        self.sleeping_time = 0.1
+        self.disconnected = False
     
-    def read(self):
-        return self.ser.readline().strip()
+    def read(self): 
+        
+       try :
+            return self.ser.readline().strip()
+        except SerialException :
+            if not self.disconnected :
+                print 'Serial disconnected'
     
+    def autochoose_port(self):
+	
+        if sys.platform.startswith('linux') :
+            os = 'linux'
+        elif sys.platform.startswith('win') :
+            os = 'win'
+        else :
+            print 'Port autochoose not supported for', os.platform
+        
+        for port, port_id_1, port_id_2  in list_comports() :
+            if os == 'linux' : 
+                pass
+            
+            
+            
+            
+            
     @classmethod
     def list_serial_ports(cls):
         """Lists serial ports
