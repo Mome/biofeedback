@@ -108,18 +108,14 @@ class DummyStreamReader:
 
 class FileWriter:
 
-    def __init__(self, filename, timed=True):
+    def __init__(self, filepath, timed=True):
         
-        if not os.path.exists(conf.data_path) :
-            os.makedirs(conf.data_path)
-        
-        path = os.path.normpath(conf.data_path + '/' + filename)
-        
-        if os.path.exists(path) :
-            raise Exception('Datafile ' + path + ' already exists !')
+        # dont know if I still need that #
+        if os.path.exists(filepath) :
+            raise Exception('Datafile ' + filepath + ' already exists !')
 
-        self.file = open(path,'a')
-        self.filename = filename
+        self.file = open(filepath,'a')
+        self.filepath = filepath
         self.timed=timed
         self.set_starting_time()
 
@@ -140,15 +136,16 @@ class FileWriter:
         self.file.close()
 
     @classmethod
-    def construct_filename(cls,subject_id,record_number=None):
+    def construct_filepath(cls,subject_id,session,record_number=None):
 
         # add additional zeros 
-        if subject_id < 10 :
+        """if subject_id < 10 :
             subject_id = '00' + str(subject_id)
         elif subject_id <= 100 :
             subject_id = '0' + str(subject_id)
-        else :
-            subject_id = str(subject_id)
+        else : """
+        
+        subject_id = str(subject_id)
 
         # find right file ending for data_delimiter
         if conf.data_delimiter == ',' :
@@ -170,20 +167,29 @@ class FileWriter:
                 record_number = max(file_list)+1
 
         # add additional zeros 
-        if record_number < 10 :
+        """if record_number < 10 :
             record_number = '00' + str(record_number)
         elif record_number <= 100 :
             record_number = '0' + str(record_number)
-        else :
-            record_number = str(record_number)
+        else :"""
         
-        file_name = subject_id + '_' + record_number + ending
-
+        record_number = str(record_number)
+        
+        filename = 'physio_record_' + subject_id + '_' + str(session) + '_' + record_number + ending
+        
+        folder_path = os.path.normpath(conf.data_path + '/subject_' + str(subject_id))
+        
+        if not os.path.exists(folder_path) :
+            os.makedirs(folder_path)
+        
+        filepath =  folder_path + '/' + filename
+        
         #if os.path.exists(file_ path) :
         #    raise Exception('File already exists. Wont overwrite data!')
 
-        return file_name
-
+        return filepath
+        
+        
 class RamWriter:
 
     def __init__(self, data, maximum):
@@ -197,7 +203,6 @@ class RamWriter:
         except :
             return False
         return True
-
 
 
 class TermWriter:

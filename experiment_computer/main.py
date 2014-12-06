@@ -42,11 +42,14 @@ def main():
         args.port = conf.default_raspi_port
 
     if args.input == 'raspi':
-        reader = stream_manager.UdpStreamReader(args.port)      
+        reader = stream_manager.UdpStreamReader(args.port)
+        plot_mask = [2,1]
     elif args.input == 'arduino' :
         reader = stream_manager.SerialStreamReader(args.port)
+        plot_mask = [0,1]
     elif args.input == 'dummy':
         reader = stream_manager.DummyStreamReader()
+        plot_mask = [0,1]
 
     manager = stream_manager.StreamManager(reader)
     
@@ -55,7 +58,7 @@ def main():
         manager.addWriter(t_writer)
 
     if 'graphical' in args.output :
-        graph = stream_manager.GraphicalWriter([1,0])
+        graph = stream_manager.GraphicalWriter(plot_mask)
         manager.addWriter(graph)
         graph.start()
 
@@ -79,9 +82,9 @@ def main():
         subject = metadata.Subject(subject_id)
         record_number = subject.get_next_record_number()
 
-        file_name = stream_manager.FileWriter.construct_filename(subject_id,record_number)
+        filepath = stream_manager.FileWriter.construct_filepath(subject_id,session,record_number)
 
-        f_writer = stream_manager.FileWriter(file_name)
+        f_writer = stream_manager.FileWriter(filepath)
         manager.addWriter(f_writer)
 
         start_time = time.time()
@@ -90,7 +93,7 @@ def main():
         marker = False
         comment = ''
         source = args.input
-        subject.add_record(record_number, file_name, session, start_time, source, sample_rate, column_labels, marker, comment)
+        subject.add_record(record_number, filepath, session, start_time, source, sample_rate, column_labels, marker, comment)
 
     manager.start()
     

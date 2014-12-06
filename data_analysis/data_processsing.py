@@ -6,7 +6,7 @@ from pylab import *
 from numpy import gradient
 import yaml
 
-import rpeakdetect as peak
+#import rpeakdetect as peak
 
 distances = lambda a : array([0]+[a[i+1]-a[i] for i in xrange(len(a)-1)])
 

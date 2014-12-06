@@ -1,13 +1,13 @@
 
-data_path = '~/inlusio_data/records'
-metadata_path = '~/inlusio_data/metadata'
+data_path = '~/inlusio_data'
+metadata_path = '~/inlusio_data'
 appdata_path = '~/inlusio_data'
 data_delimiter = ','
 
 default_coloumn_labels = ['relative_time','ecg','gsr']
 default_raspi_port = 49152
 default_sample_rate = '100Hz'
-metadata_file_prefix = 'subject'
+metadata_file_prefix = 'physio_meta'
 
 
 
