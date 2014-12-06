@@ -39,6 +39,7 @@ class SerialStreamReader():
         self.port = port
         self.baud = baud
         self.sleeping_time = 0.1
+        self.connected = False
         self.reconnect()
     
     def read(self): 
@@ -47,7 +48,8 @@ class SerialStreamReader():
             return self.ser.readline().strip()
         except SerialException :
             print 'Serial disconnected'
-            reconnect()
+            self.connected = False
+            self.reconnect()
             return self.ser.readline().strip()
     
     def reconnect(self):
@@ -55,17 +57,26 @@ class SerialStreamReader():
         if self.port != 'auto' :
             try :
                 self.ser = Serial(self.port, self.baud)
+                self.connected = True
                 return
             except SerialException:
                 print 'Cannot connect to old port !'
+                self.connected = False
         
-        port = self.autochoose_port()
-        print 'waiting for reconnect'
-        while port == None :
+        while not self.connected :
             port = self.autochoose_port()
-            time.sleep(self.sleep_time)
-        self.port = port
-        self.ser = Serial(self.port, self.baud)
+            print 'waiting for reconnect'
+            while port == None :
+                port = self.autochoose_port()
+                time.sleep(self.sleeping_time)
+            print 'chose port', port
+            self.port = port
+            try :
+                self.ser = Serial(self.port, self.baud)
+                self.connected = True
+            except :
+                self.connected = False
+        
         print 'reconnected !'
     
     def autochoose_port(self):
@@ -86,12 +97,6 @@ class SerialStreamReader():
         
         return target_port
         
-        
-            
-            
-            
-            
-            
     @classmethod
     def list_serial_ports(cls):
         """Lists serial ports
@@ -296,7 +301,11 @@ class GraphicalWriter:
         self.data = np.zeros((len(lanes),data_buffer_size))
     
     def write(self,new_data):
-        new_data = np.array([float(d) for d in new_data.split(conf.data_delimiter)])
+        try :
+            new_data = np.array([float(d) for d in new_data.split(conf.data_delimiter)])
+        except ValueError as ve:
+            print str(ve), new_data
+            return
         new_data = new_data[self.lanes]
         self.data[:,self.index] = new_data
         # silly noise reduction #
