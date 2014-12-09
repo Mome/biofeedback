@@ -80,18 +80,22 @@ class SerialStreamReader():
         print 'reconnected !'
     
     def autochoose_port(self):
+        """ Automatically chooses the comport where the device information is
+            identically to a string saved in the configurations file.
+            Trimmed to last information from pyserial's list_comports method"""
         
         if sys.platform.startswith('linux') :
-            target_port_id = (conf.linux_port_id_1, conf.linux_port_id_2)
+            target_port_id = conf.linux_port_id_2
         elif sys.platform.startswith('win') :
-            target_port_id = (conf.win_port_id_1, conf.win_port_id_2)
+            target_port_id = conf.win_port_id_2
         else :
             print 'Port autochoose not supported for', os.platform
         
         target_port = None
         
         for port, port_id_1, port_id_2  in list_comports() :
-            if (port_id_1, port_id_2) == target_port_id :
+            
+            if port_id_2 == target_port_id :
                 target_port = port
                 break
         
