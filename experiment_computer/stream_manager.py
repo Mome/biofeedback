@@ -1,4 +1,3 @@
-import glob
 import itertools
 import math
 import os
@@ -60,16 +59,14 @@ class SerialStreamReader():
                 self.connected = True
                 return
             except SerialException:
-                print 'Cannot connect to old port !'
+                #print 'Cannot connect to old port !'
                 self.connected = False
         
         while not self.connected :
             port = self.autochoose_port()
-            print 'waiting for reconnect'
             while port == None :
                 port = self.autochoose_port()
                 time.sleep(self.sleeping_time)
-            print 'chose port', port
             self.port = port
             try :
                 self.ser = Serial(self.port, self.baud)
@@ -77,10 +74,9 @@ class SerialStreamReader():
             except :
                 self.connected = False
         
-        print 'reconnected !'
+        print 'Connected to', self.port
     
     def autochoose_port(self):
-        
         if sys.platform.startswith('linux') :
             target_port_id = (conf.linux_port_id_1, conf.linux_port_id_2)
         elif sys.platform.startswith('win') :
@@ -96,38 +92,6 @@ class SerialStreamReader():
                 break
         
         return target_port
-        
-    @classmethod
-    def list_serial_ports(cls):
-        """Lists serial ports
-
-        :raises EnvironmentError:
-            On unsupported or unknown platforms
-        :returns:
-            A list of available serial ports
-        """
-        if sys.platform.startswith('win'):
-            ports = ['COM' + str(i + 1) for i in range(256)]
-
-        elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-            # this is to exclude your current terminal "/dev/tty"
-            ports = glob.glob('/dev/tty[A-Za-z]*')
-
-        elif sys.platform.startswith('darwin'):
-            ports = glob.glob('/dev/tty.*')
-
-        else:
-            raise EnvironmentError('Unsupported platform')
-
-        result = []
-        for port in ports:
-            try:
-                s = Serial(port)
-                s.close()
-                result.append(port)
-            except (OSError, SerialException):
-                pass
-        return result 
 
 
 class DummyStreamReader:
@@ -346,7 +310,7 @@ class StreamManager:
             raise Exception('StreamManager already running!')
         self.is_running = True
         threading.Thread(target=self._run).start()
-        print 'StreamManager reading at port: ' + str(self.stream_reader.port) + ' !'
+        #print 'StreamManager reading at port: ' + str(self.stream_reader.port) + ' !'
 
     def _run(self) :
         while self.is_running :

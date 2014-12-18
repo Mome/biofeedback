@@ -28,7 +28,8 @@ def main():
             args.output.append(choices[int(i)-1])
     
     if args.port==None and args.input=='arduino' :
-        ports = stream_manager.SerialStreamReader.list_serial_ports()
+        #ports = stream_manager.SerialStreamReader.list_serial_ports()
+        ports = [port_tuple[0] for port_tuple in stream_manager.list_comports()]
         print 'Available ports:', ports
         if len(ports) > 1 :
             args.port = raw_input('Choose a port: ')
