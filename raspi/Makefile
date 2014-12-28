@@ -1,5 +1,5 @@
-#EHEALTH_PATH=eHealth2-raspberry
-EHEALTH_PATH=eHealth2-raspberry-V2.3
+EHEALTH_PATH=eHealth2-raspberry
+#EHEALTH_PATH=eHealth2-raspberry-V2.3
 
 all: GET_SENSOR_DATA 
 

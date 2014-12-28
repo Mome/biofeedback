@@ -8,10 +8,14 @@ import sys
 import threading
 import time
 
-from pyqtgraph.Qt import QtGui, QtCore
 import numpy as np
-import pyqtgraph as pg
-import serial
+try :
+    import pyqtgraph as pg
+    from pyqtgraph.Qt import QtGui, QtCore
+except ImportError as ie:
+    print 'Print Graphical Plotting not possible :', str(ie)
+from serial import Serial, SerialException
+from serial.tools.list_ports import comports as list_comports
 
 import configurations as conf
 
@@ -30,45 +34,70 @@ class UdpStreamReader:
 
 class SerialStreamReader():
 
-    def __init__(self, port, baud=115200):    
+    def __init__(self, port, baud=115200):
         self.port = port
         self.baud = baud
-        self.ser = serial.Serial(port, baud)
+        self.sleeping_time = 0.1
+        self.connected = False
+        self.reconnect()
     
-    def read(self):
-        return self.ser.readline().strip()
+    def read(self): 
+        
+        try :
+            return self.ser.readline().strip()
+        except SerialException :
+            print 'Serial disconnected'
+            self.connected = False
+            self.reconnect()
+            return self.ser.readline().strip()
     
-    @classmethod
-    def list_serial_ports(cls):
-        """Lists serial ports
+    def reconnect(self):
+    
+        if self.port != 'auto' :
+            try :
+                self.ser = Serial(self.port, self.baud)
+                self.connected = True
+                return
+            except SerialException:
+                #print 'Cannot connect to old port !'
+                self.connected = False
+        
+        while not self.connected :
+            port = self.autochoose_port()
+            while port == None :
+                port = self.autochoose_port()
+                time.sleep(self.sleeping_time)
+            self.port = port
+            try :
+                self.ser = Serial(self.port, self.baud)
+                self.connected = True
+            except :
+                self.connected = False
+        
+        print 'Connected to', self.port
+    
+    def autochoose_port(self):
 
-        :raises EnvironmentError:
-            On unsupported or unknown platforms
-        :returns:
-            A list of available serial ports
-        """
-        if sys.platform.startswith('win'):
-            ports = ['COM' + str(i + 1) for i in range(256)]
-
-        elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-            # this is to exclude your current terminal "/dev/tty"
-            ports = glob.glob('/dev/tty[A-Za-z]*')
-
-        elif sys.platform.startswith('darwin'):
-            ports = glob.glob('/dev/tty.*')
-
-        else:
-            raise EnvironmentError('Unsupported platform')
-
-        result = []
-        for port in ports:
-            try:
-                s = serial.Serial(port)
-                s.close()
-                result.append(port)
-            except (OSError, serial.SerialException):
-                pass
-        return result 
+        """ Automatically chooses the comport where the device information is
+            identically to a string saved in the configurations file.
+            Trimmed to last information from pyserial's list_comports method"""
+        
+        if sys.platform.startswith('linux') :
+            target_port_id = conf.linux_port_id_2
+        elif sys.platform.startswith('win') :
+            target_port_id = conf.win_port_id_2
+        else :
+            print 'Port autochoose not supported for', os.platform
+        
+        target_port = None
+        
+        for port, port_id_1, port_id_2  in list_comports() :
+            
+            if port_id_2 == target_port_id :
+                target_port = port
+                break
+        
+        return target_port
 
 
 class DummyStreamReader:
@@ -108,18 +137,14 @@ class DummyStreamReader:
 
 class FileWriter:
 
-    def __init__(self, filename, timed=True):
+    def __init__(self, filepath, timed=True):
         
-        if not os.path.exists(conf.data_path) :
-            os.makedirs(conf.data_path)
-        
-        path = os.path.normpath(conf.data_path + '/' + filename)
-        
-        if os.path.exists(path) :
-            raise Exception('Datafile ' + path + ' already exists !')
+        # dont know if I still need that #
+        if os.path.exists(filepath) :
+            raise Exception('Datafile ' + filepath + ' already exists !')
 
-        self.file = open(path,'a')
-        self.filename = filename
+        self.file = open(filepath,'a')
+        self.filepath = filepath
         self.timed=timed
         self.set_starting_time()
 
@@ -140,15 +165,16 @@ class FileWriter:
         self.file.close()
 
     @classmethod
-    def construct_filename(cls,subject_id,record_number=None):
+    def construct_filepath(cls, subject_id, session, record_number=None):
 
         # add additional zeros 
-        if subject_id < 10 :
+        """if subject_id < 10 :
             subject_id = '00' + str(subject_id)
         elif subject_id <= 100 :
             subject_id = '0' + str(subject_id)
-        else :
-            subject_id = str(subject_id)
+        else : """
+        
+        subject_id = str(subject_id)
 
         # find right file ending for data_delimiter
         if conf.data_delimiter == ',' :
@@ -170,20 +196,29 @@ class FileWriter:
                 record_number = max(file_list)+1
 
         # add additional zeros 
-        if record_number < 10 :
+        """if record_number < 10 :
             record_number = '00' + str(record_number)
         elif record_number <= 100 :
             record_number = '0' + str(record_number)
-        else :
-            record_number = str(record_number)
+        else :"""
         
-        file_name = subject_id + '_' + record_number + ending
-
+        record_number = str(record_number)
+        
+        filename = 'physio_record_' + subject_id + '_' + str(session) + '_' + record_number + ending
+        
+        folder_path = os.path.normpath(conf.data_path + '/subject_' + str(subject_id))
+        
+        if not os.path.exists(folder_path) :
+            os.makedirs(folder_path)
+        
+        filepath =  folder_path + '/' + filename
+        
         #if os.path.exists(file_ path) :
         #    raise Exception('File already exists. Wont overwrite data!')
 
-        return file_name
-
+        return filepath
+        
+        
 class RamWriter:
 
     def __init__(self, data, maximum):
@@ -197,7 +232,6 @@ class RamWriter:
         except :
             return False
         return True
-
 
 
 class TermWriter:
@@ -237,7 +271,11 @@ class GraphicalWriter:
         self.data = np.zeros((len(lanes),data_buffer_size))
     
     def write(self,new_data):
-        new_data = np.array([float(d) for d in new_data.split(conf.data_delimiter)])
+        try :
+            new_data = np.array([float(d) for d in new_data.split(conf.data_delimiter)])
+        except ValueError as ve:
+            print str(ve), new_data
+            return
         new_data = new_data[self.lanes]
         self.data[:,self.index] = new_data
         # silly noise reduction #
@@ -278,7 +316,7 @@ class StreamManager:
             raise Exception('StreamManager already running!')
         self.is_running = True
         threading.Thread(target=self._run).start()
-        print 'StreamManager reading at port: ' + str(self.stream_reader.port) + ' !'
+        #print 'StreamManager reading at port: ' + str(self.stream_reader.port) + ' !'
 
     def _run(self) :
         while self.is_running :

@@ -5,11 +5,13 @@ import yaml
 class Subject:
 
     def __init__(self,subject_id):
+    
+        path = conf.metadata_path + os.sep + 'subject_' + str(subject_id)
 
-        if not os.path.exists(conf.metadata_path) :
-            os.makedirs(conf.metadata_path)
+        if not os.path.exists(path) :
+            os.makedirs(path)
 
-        self.file_path = conf.metadata_path + os.sep + conf.metadata_file_prefix + '_' + str(subject_id) + '.yml'
+        self.file_path = path + os.sep + conf.metadata_file_prefix + '_' + str(subject_id) + '.yml'
 
         if os.path.exists(self.file_path) :
             with open(self.file_path) as f:

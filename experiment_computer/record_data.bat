@@ -1,0 +1,1 @@
+python main.py -p auto --input arduino --output file
