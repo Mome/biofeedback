@@ -96,6 +96,7 @@ def process_ecg(signal):
     pulse = None
     return pulse
 
+
 def divide_into_epoches(criterium_tup, data_tup):
     #criterium_indices = where(criterium_data[1] == criterium)[0]
     #criterium_times = array(criterium_indices, criterium_data[0])
@@ -127,7 +128,7 @@ def divide_into_epoches(criterium_tup, data_tup):
 
     return epoch_dict
 
-        
+
 def plot_with_background_color(x_axis_divisions,colors, graph_data):
     import matplotlib.pyplot as plt
     import matplotlib.collections as collections
@@ -141,23 +142,26 @@ def plot_with_background_color(x_axis_divisions,colors, graph_data):
     xad = list(copy(x_axis_divisions))
     #xad.append(graph_data[0][-1])
     xranges = [(xad[i],xad[i+1]-xad[i]) for i in xrange(len(xad)-1)]
-    yrange = (0, 3)
-    print(len(xranges))
-
+    yrange = (0, 15)
     def color_choice(color_code):
         if color_code == 0:
-            return 'white'
+            return 'purple'
         elif color_code == 1:
             return 'green'
         elif color_code == 2:
             return 'red'
-        else :
+        elif color_code == 3:
+            return 'yellow'
+        elif color_code == 4:
             return 'blue'
+        elif color_code == 5:
+            return 'grey'
+        if color_code == -1:
+            return 'white'
 
     colors = [color_choice(color_code) for color_code in colors]
 
     for i in xrange(len(xranges)) :
-        print '[xranges[i]]', [xranges[i]], 'bla'
         coll = collections.BrokenBarHCollection([xranges[i]], yrange, facecolor=colors[i], alpha=0.5)
         ax.add_collection(coll)
 
@@ -183,7 +187,7 @@ def process_data(data_path='../data/trail_data/'):
     if not data_path.endswith('/'):
         data_path += '/'
 
-    subject_id = '102'
+    subject_id = '103'
     record_number = '000'
 
     record_file_name = str(subject_id) + '_' + str(record_number) + '.csv'
@@ -253,16 +257,60 @@ def process_data(data_path='../data/trail_data/'):
 
     filtered_gsr_data = (physio_times,gsr_f)
 
+    #epochs_gsr = divide_into_epoches(conditions,filtered_gsr_data)
 
-    #divide_into_epoches(conditions,filtered_gsr_data)
-    plot_with_background_color()
+    di = distances(conditions[0])
+    #figure()
+    #plot(di)
+    #show()
+    s = sort(di)[::-1]
+    a = conditions[0][where(di == s[0])[0]][0]
+    b =  conditions[0][where(di == s[1])[0]][0]
+    c =  conditions[0][where(di == s[2])[0]][0]
+    d =  conditions[0][where(di == s[3])[0]][0]
+    e =  conditions[0][where(di == s[4])[0]][0]
+
+    pauses = sort(array([a,b,c,d,e]))
+    print 'pauses', pauses
+
+    """pause_index = 0
+    for i in range(len(conditions[0])):
+        if conditions[0][i] == pauses[pause_index] :
+            conditions[1][i] = 0
+            pause_index+=1
+            if pause_index<len(pauses) :
+                break"""
+
+    conditions[1][44] = -1
+    #conditions[1][51] = -1
+    conditions[1][85] = -1
+    conditions[1][115] = -1
+    conditions[1][145] = -1
+
+    #x_axis_divisions = append(conditions[0],filtered_gsr_data[0][-1])
+    x_axis_divisions = [conditions[0][0]]
+    colors = [conditions[1][0]]
+    last_c = conditions[1][0]
+    pause_index = 0
+    for i,c in enumerate(conditions[1]) :
+        """if pause_index<len(pauses) and conditions[0][i] > pauses[pause_index] :
+            x_axis_divisions.append(pauses[pause_index])
+            colors.append(0)
+            pause_index+=1"""
+        if last_c != c :
+            x_axis_divisions.append(conditions[0][i])
+            colors.append(c)
+            last_c = c    
+
+    plot_with_background_color(x_axis_divisions,colors,filtered_gsr_data)
+
 
     #figure()
     #plot(ecg_data[0],ecg_data[1])
     #figure()
     #plot(gsr_data[0],gsr_f)
     #figure()
-    #step(trail_type_p[0],trail_type_p[1])
+    #step(conditions[0],conditions[1])
     #figure()
     #figure()
     #step(status[0],status[1])
