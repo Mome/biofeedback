@@ -1,41 +1,82 @@
 from __future__ import division
 import calendar
+import os
+import sys
 import time
+
+sys.path.append('../experiment_computer')
 
 from pylab import *
 from numpy import gradient
 import yaml
 
+import configurations as conf
+
+
 #import rpeakdetect as peak
 
 distances = lambda a : array([0]+[a[i+1]-a[i] for i in xrange(len(a)-1)])
 
+
 def load_data(path):
     with open(path) as csv_file:
         data = csv_file.readlines()
-    # test if first row float
-    data = [line.strip().split(',') for line in data if line.strip()!='']
-    data = array(data).T
-    out= []
-    for i,line in enumerate(data) :
-        try:
-            line = array(line,dtype='float64')
-        except :
-            print 'not convertable', path, i
-        out.append(line)
-    return out
+    data = [ line.strip().split(',') for line in data if line.strip()!='']
+
+    return data
+
+
+def prepare_munis_data(data) :
+
+    # check for equal depth
+    depth = len(data[0])
+    for row in data :
+        if len(row)!=depth :
+            raise Exception('Rows must have equal lenght!')
+
+    # transpose
+    data = zip(*data)
+
+    # converte float lists to arrays
+    data = [array(coloumn, dtype='float64') if is_float(coloumn[0]) else array(coloumn) \
+            for coloumn in data]
+
+    return data
+
+
+def load_physio_data(path):
+
+    data = load_data(path)
+
+    # replace empty string with -1
+    for i in xrange(len(data)) : 
+        for j in xrange(len(data[i])) :
+            if data[i][j] == '' :
+                data[i][j] = '-1'
+
+    # remove rows with less than 3 coloumns
+    data = [row for row in data if len(row)==3]
+
+    # convert to integrers
+    data = array(data, dtype='float64')
+
+    # transpose data
+    data = data.T
+
+    return data
 
 
 def convert_time_array(time_array):
     out = zeros(len(time_array),dtype='float64')
     for i,s in enumerate(time_array) :
-        s, rest = s.split('.')
-        subseconds, rest = rest.split('+')
+        s, subseconds = s.split('.')
+        subseconds = subseconds[:-1]
         date = time.strptime(s, '%Y-%m-%dT%H:%M:%S')
         out[i] = float(calendar.timegm(date)) + float('0.'+subseconds)
     #print 'time_array 1', out[0:12]
     #print 'commatest',out[0] - int(out[0])
     return out
+
 
 def align_times(start_times, relative_times):
     start_times = array(start_times, dtype='float64')
@@ -156,7 +197,7 @@ def plot_with_background_color(x_axis_divisions,colors, graph_data):
             return 'blue'
         elif color_code == 5:
             return 'grey'
-        if color_code == -1:
+        elif color_code == 6:
             return 'white'
 
     colors = [color_choice(color_code) for color_code in colors]
@@ -182,121 +223,93 @@ def process_gsr(signal):
     return filtered_signal, grad, filtered_grad,baseline
 
 
-def process_data(data_path='../data/trail_data/'):
+def process_data():
 
-    if not data_path.endswith('/'):
-        data_path += '/'
+    subject_id = str(205)
+    session = str(2)
+    train_number = str(1)
 
-    subject_id = '103'
-    record_number = '000'
+    # file paths
+    subject_folder = conf.data_path + os.sep + 'subject_' + subject_id
+    physio_file_name='physio_record_' + subject_id +'_'+ session +'_'+ train_number +'.csv'
+    physio_data_path =  subject_folder + os.sep + physio_file_name
+    meta_path = subject_folder + os.sep + 'physio_meta_' + subject_id +'.yml'
+    parameters_path = subject_folder + os.sep + 'parameters_' + subject_id + '_' + session +'.csv'
+    smallspread_path = subject_folder + os.sep + 'Smallspread_' + subject_id + '_' + session +'.csv'
+    scores_path = subject_folder + os.sep + 'SubjectScores.csv'
 
-    record_file_name = str(subject_id) + '_' + str(record_number) + '.csv'
+    # load all data
+    physio_data = load_physio_data(physio_data_path)
+    parameters = load_data(parameters_path)
+    smallspread = load_data(smallspread_path)
+    scores = load_data(scores_path)
+
+    # prepare_data
+    parameters = prepare_munis_data(parameters)
+    smallspread = prepare_munis_data(smallspread)
+    scores = prepare_munis_data(scores)
 
     # get physio starting time from yaml file
-    with open(data_path + 'metadata/subject_' + str(subject_id) + '.yml') as yaml_file :
+    with open(meta_path) as yaml_file :
         meta = yaml.load(yaml_file.read())
     physio_times_start = -1
     for record in meta['records']:
-        if record['file_name'] == record_file_name :
+        if record['file_name'].endswith(physio_file_name) :
             physio_times_start = float(record['start_time'])
     if physio_times_start == -1 :
-        raise Exception(record_file_name + 'not found!')
+        raise Exception(record_file_name + 'not found!')    
 
-    #ECG & GSR
-    path = data_path + 'records/' + record_file_name
-    data = load_data(path)
-
-    # get physiotimes and convert to seconds
-    physio_times = array(data[0], dtype='float64')/1000.0
-    sample_rate = None
-
-    # occulus data
-    path = data_path + str(subject_id) + '/Parameters.csv'
-    parameters = load_data(path)
-    path = data_path + str(subject_id) + '/Trial-Error-Angles.csv'
+    """path = data_path + str(subject_id) + '/Trial-Error-Angles.csv'
     te_angles = load_data(path)
     path = data_path + str(subject_id) + '/Trial-Stressors.csv'
-    trail_stessors = load_data(path)
+    trail_stessors = load_data(path)"""
 
     # convert dates to seconds
+    physio_times = array(physio_data[0], dtype='float64')/1000.0
     p_times = convert_time_array(parameters[0])
-    tea_times = convert_time_array(te_angles[0])
-    ts_times = convert_time_array(trail_stessors[0])
+    s_times = convert_time_array(smallspread[0])
 
     # get start times
     p_times_start = p_times[0]
-    tea_times_start = tea_times[0]
-    ts_times_start = ts_times[0]
-
-    # convert start times to utc
-    one_hour_in_seconds = 60*60
-    p_times_start -= one_hour_in_seconds
-    tea_times_start -= one_hour_in_seconds
-    ts_times_start -= one_hour_in_seconds
+    s_times_start = s_times[0]
 
     # absolute time to relative time representation
     p_times -= p_times[0]
-    tea_times -= tea_times[0]
-    ts_times -= ts_times[0]
+    s_times -= s_times[0]
+
+    print 'p_times', len(p_times), p_times[0]
+    print 's_times', len(s_times), s_times[0]
+    print 'p_times_start',p_times_start
+    print 's_times_start', s_times_start
+    print 'physio_times_start', physio_times_start
 
     # align timescales
-    physio_times,p_times,tea_times,ts_times =\
-    align_times((physio_times_start,p_times_start,tea_times_start,ts_times_start),\
-        [physio_times,p_times,tea_times,ts_times])
+    physio_times,p_times,s_times =\
+    align_times((physio_times_start,p_times_start,s_times_start),\
+        [physio_times,p_times,s_times])
 
     # (time,data) tuples
-    ecg_data = (physio_times,data[1])
-    gsr_data = (physio_times,data[2])
-    conditions = (p_times,parameters[8])
-    success = (p_times,parameters[9])
-    status = (ts_times,trail_stessors[3])
+    ecg_data = (physio_times,physio_data[1])
+    gsr_data = (physio_times,physio_data[2])
+    conditions = (p_times,parameters[8]) # trail type
+    print(set(conditions[1]))
 
     # process physio data
     pulse = process_ecg(ecg_data[1])
     gsr_f, gsr_g, gsr_f_g, gsr_b = process_gsr(gsr_data[1])
+    #filtered_signal,grad,filtered_grad,baseline
 
     filtered_gsr_data = (physio_times,gsr_f)
 
     #epochs_gsr = divide_into_epoches(conditions,filtered_gsr_data)
 
     di = distances(conditions[0])
-    #figure()
-    #plot(di)
-    #show()
-    s = sort(di)[::-1]
-    a = conditions[0][where(di == s[0])[0]][0]
-    b =  conditions[0][where(di == s[1])[0]][0]
-    c =  conditions[0][where(di == s[2])[0]][0]
-    d =  conditions[0][where(di == s[3])[0]][0]
-    e =  conditions[0][where(di == s[4])[0]][0]
-
-    pauses = sort(array([a,b,c,d,e]))
-    print 'pauses', pauses
-
-    """pause_index = 0
-    for i in range(len(conditions[0])):
-        if conditions[0][i] == pauses[pause_index] :
-            conditions[1][i] = 0
-            pause_index+=1
-            if pause_index<len(pauses) :
-                break"""
-
-    conditions[1][44] = -1
-    #conditions[1][51] = -1
-    conditions[1][85] = -1
-    conditions[1][115] = -1
-    conditions[1][145] = -1
 
     #x_axis_divisions = append(conditions[0],filtered_gsr_data[0][-1])
     x_axis_divisions = [conditions[0][0]]
     colors = [conditions[1][0]]
     last_c = conditions[1][0]
-    pause_index = 0
     for i,c in enumerate(conditions[1]) :
-        """if pause_index<len(pauses) and conditions[0][i] > pauses[pause_index] :
-            x_axis_divisions.append(pauses[pause_index])
-            colors.append(0)
-            pause_index+=1"""
         if last_c != c :
             x_axis_divisions.append(conditions[0][i])
             colors.append(c)
@@ -316,30 +329,24 @@ def process_data(data_path='../data/trail_data/'):
     #step(status[0],status[1])
     show()
 
+def is_float(number):
+    try :
+        float(number)
+        return True
+    except :
+        return False
 
 if __name__ == '__main__' :
-    gsr = False
     ecg = False
-    time_ = False
     process = True
 
     if process :
         process_data()
+        sys.exit(0)
 
     path = '../data/trail_data/records/102_000.csv'
     data = load_data(path)
         
-    if time_ :
-        time_data = data[0]
-        plot(gradient(time_data[10000:10100]))
-        print mean(gradient(time_data[1000:-1000]))
-    if gsr :
-        f,g,gf = process_gsr(data[2])
-        figure()
-        plot(data[2])
-        figure()
-        plot(f)
-        show()
     if ecg :
         ecg_data = data[1]
         ecg_data = ecg_data[500:-1]
