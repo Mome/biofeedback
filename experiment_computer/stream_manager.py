@@ -15,7 +15,11 @@ try :
 except ImportError as ie:
     print 'Print Graphical Plotting not possible :', str(ie)
 from serial import Serial, SerialException
-from serial.tools.list_ports import comports as list_comports
+
+try :
+    from serial.tools.list_ports import comports as list_comports
+except :
+    print 'autochoose port for arduino not available, possibly update pyserial'
 
 import configurations as conf
 
