@@ -1,4 +1,5 @@
 import argparse
+import os
 import time
 
 import configurations as conf
@@ -105,5 +106,26 @@ def main():
     manager.stop()
     print 'zuende'
 
+def create_singelton():
+    home_folder = os.path.expanduser('~')
+    open(home_folder + os.sep + 'physio_singleton_lock','w')
+
+def remove_singleton():
+    home_folder = os.path.expanduser('~')
+    os.remove(home_folder + os.sep + 'physio_singleton_lock')
+
+def singleton_exists():
+    home_folder = os.path.expanduser('~')
+    return os.path.exists(home_folder + os.sep + 'physio_singleton_lock')
+
 if __name__=='__main__':
-    main()
+    if not singleton_exists() :
+        try :
+            create_singelton()
+            main()
+        finally :
+            remove_singleton()
+    else :
+        print 'Programm already running.'
+        print 'Close other instances !! If you are sure no other instance is running remove the file "physio_singleton_lock" from your home directory.'
+        raw_input('Press ENTER to continue.')

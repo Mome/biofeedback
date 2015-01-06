@@ -16,6 +16,10 @@ win_port_id_2 = 'FTDIBUS\\VID_0403+PID_6001+A900ABVGA\\0000'
 linux_port_id_1 = 'Future Technology Devices International, Ltd FT232 USB-Serial (UART) IC '
 linux_port_id_2 = 'USB VID:PID=0403:6001 SNR=A900abvG'
 
+netstore_path = "//samba.ikw.uos.de/dfs/store/nbp/inlusio_data"
+
+editor="gedit"
+
 
 # ---------------- RESOLVE PATHS ---------------- #
 import os
