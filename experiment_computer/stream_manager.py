@@ -21,6 +21,9 @@ try :
 except :
     print 'autochoose port for arduino not available, possibly update pyserial'
 
+import winsound
+
+
 import configurations as conf
 from utils import is_float
 
@@ -306,10 +309,9 @@ class GraphicalWriter:
         self.timer.start(16.6)
 
 # fix this to be usable with lane parameter
- class AudioWriter:
+class AudioWriter:
  
     def __init__(self):
-        import winsound
         self.ecg_upper_limit = 5.0
         self.ecg_lower_limit = 0.0
         self.gsr_upper_limit = float('inf')
@@ -348,7 +350,7 @@ class GraphicalWriter:
         
     def play_sound(self, kind):
         _run = lambda : self._run(kind)
-        threading.Thread(target=s_run).start()
+        threading.Thread(target=_run).start()
     
     def _run(self, kind):
         if kind == 'ecg' :
