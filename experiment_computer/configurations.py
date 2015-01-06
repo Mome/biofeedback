@@ -2,6 +2,7 @@
 data_path = '~/inlusio_data'
 metadata_path = '~/inlusio_data'
 appdata_path = '~/inlusio_data'
+netstore_path = "//samba.ikw.uos.de/dfs/store/nbp/inlusio_data"
 data_delimiter = ','
 
 default_coloumn_labels = ['relative_time','ecg','gsr']
@@ -26,5 +27,7 @@ appdata_path = os.path.expanduser(appdata_path)
 appdata_path = os.path.normpath(appdata_path)
 module_path = os.path.dirname(os.path.abspath(__file__))
 module_path = os.path.normpath(module_path)
+netstore_path = os.path.normpath(netstore_path)
+netstore_path = os.path.expanduser(netstore_path)
 del os
 # ----------------------------------------------- #

@@ -18,6 +18,7 @@ from serial import Serial, SerialException
 from serial.tools.list_ports import comports as list_comports
 
 import configurations as conf
+from utils import is_float
 
 
 class UdpStreamReader:
@@ -300,6 +301,57 @@ class GraphicalWriter:
         self.timer.timeout.connect(self.update)
         self.timer.start(16.6)
 
+# fix this to be usable with lane parameter
+ class AudioWriter:
+ 
+    def __init__(self):
+        import winsound
+        self.ecg_upper_limit = 5.0
+        self.ecg_lower_limit = 0.0
+        self.gsr_upper_limit = float('inf')
+        self.gsr_lower_limit = -1.0
+        
+        self.gsr_freq = 1000
+        self.ecg_freq = 500
+        
+        self.duration = 500 # msecs
+        
+        self.busy = False;
+    
+    def write(self, new_data) :
+        if self.busy :
+            return 
+        
+        ecg, gsr = new_data.split(',')
+        
+        if not is_float(ecg) :
+            self.busy = True
+            self.play_sound('ecg')
+            return
+            
+        if not is_float(gsr) :
+            self.busy = True
+            self.play_sound('gsr') 
+            return
+        
+        ecg = float(ecg) 
+        gsr = float(gsr)
+        
+        if self.ecg_upper_limit <= ecg <= self.ecg_lower_limit :
+            self.play_sound(self, 'ecg')
+        elif self.gsr_upper_limit <= gsr <= self.gsr_lower_limit :
+            self.play_sound(self, 'gsr')
+        
+    def play_sound(self, kind):
+        _run = lambda : self._run(kind)
+        threading.Thread(target=s_run).start()
+    
+    def _run(self, kind):
+        if kind == 'ecg' :
+            winsound.Beep(self.ecg_freq, self.duration)
+        elif kind == 'gsr' :
+            winsound.Beep(self.gsr_freq, self.duration)
+        self.busy = False
 
 class StreamManager:
 

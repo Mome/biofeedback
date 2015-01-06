@@ -3,18 +3,21 @@ import os
 import string
 import subprocess
 
+
 #Small function to check the availability of network resource.
 def isAvailable(path):
     winCMD = 'IF EXIST ' + path + ' echo YES'
     cmdOutPut = subprocess.Popen(winCMD, stdout=subprocess.PIPE, shell=True).communicate()
     return string.find(str(cmdOutPut), 'YES',)
 
+    
 #Small function to check if the mention location is a directory
 def isDirectory(path):
     winCMD = 'dir ' + path + ' | FIND ".."'
     cmdOutPut = subprocess.Popen(winCMD, stdout=subprocess.PIPE, shell=True).communicate()
     return string.find(str(cmdOutPut), 'DIR',)
 
+    
 def mapNetworkDrive(drive, networkPath, user, password):
 
 	#Check for drive availability
@@ -52,6 +55,7 @@ def mapNetworkDrive(drive, networkPath, user, password):
 	#Mapped with first try
 	return 1
 
+    
 def unmapNetworkDrive(drive):
 
 	#Check if the drive is in use
@@ -68,7 +72,7 @@ def unmapNetworkDrive(drive):
 	#UN-MAP successful
 	return 1
 
-drive = 'Z' 
+drive = 'z:' 
  
 netstore_path = "//samba.ikw.uos.de/dfs/store/nbp/inlusio_data"
 netstore_path = os.path.normpath(netstore_path)
