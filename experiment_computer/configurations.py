@@ -17,6 +17,8 @@ linux_port_id_2 = 'USB VID:PID=0403:6001 SNR=A900abvG'
 
 netstore_path = "//samba.ikw.uos.de/dfs/store/nbp/inlusio_data"
 
+editor="gedit"
+
 
 # ---------------- RESOLVE PATHS ---------------- #
 import os
