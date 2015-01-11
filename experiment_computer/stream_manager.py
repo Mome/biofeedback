@@ -21,7 +21,10 @@ try :
 except :
     print 'autochoose port for arduino not available, possibly update pyserial'
 
-import winsound
+try :
+    import winsound
+except :
+    print 'Winsound not available !'
 
 
 import configurations as conf
@@ -145,14 +148,14 @@ class DummyStreamReader:
 
 class FileWriter:
 
-    def __init__(self, filepath, timed=True):
+    def __init__(self, file_path, timed=True):
         
         # dont know if I still need that #
-        if os.path.exists(filepath) :
-            raise Exception('Datafile ' + filepath + ' already exists !')
+        if os.path.exists(file_path) :
+            raise Exception('Datafile ' + file_path + ' already exists !')
 
-        self.file = open(filepath,'a')
-        self.filepath = filepath
+        self.file = open(file_path,'a')
+        self.file_path = file_path
         self.timed=timed
         self.set_starting_time()
 
@@ -183,6 +186,10 @@ class FileWriter:
         else : """
         
         subject_id = str(subject_id)
+        session = str(session)
+
+        folder_path = os.path.normpath(conf.data_path + '/subject_' + subject_id)
+        file_beginning = 'physio_record_' + subject_id + '_' + session + '_'
 
         # find right file ending for data_delimiter
         if conf.data_delimiter == ',' :
@@ -195,11 +202,12 @@ class FileWriter:
             ending = '.dsv'
 
         if record_number == None :
-            file_list = os.listdir(conf.data_path)
-            file_list = [f[4:-4] for f in file_list if f.startswith(subject_id)]
+            file_list = os.listdir(folder_path)
+            file_list = [f[len(file_beginning):-len(ending)] for f in file_list if f.startswith(file_beginning)]
             file_list = [int(f) for f in file_list if f.isdigit()]
             if file_list == [] :
                 record_number = 0
+                print 'empty file_list'
             else :
                 record_number = max(file_list)+1
 
@@ -212,19 +220,17 @@ class FileWriter:
         
         record_number = str(record_number)
         
-        filename = 'physio_record_' + subject_id + '_' + str(session) + '_' + record_number + ending
-        
-        folder_path = os.path.normpath(conf.data_path + '/subject_' + str(subject_id))
+        filename = file_beginning + record_number + ending
         
         if not os.path.exists(folder_path) :
             os.makedirs(folder_path)
         
-        filepath =  folder_path + '/' + filename
+        file_path =  folder_path + '/' + filename
         
         #if os.path.exists(file_ path) :
         #    raise Exception('File already exists. Wont overwrite data!')
 
-        return filepath
+        return file_path
         
         
 class RamWriter:
@@ -250,11 +256,15 @@ class TermWriter:
 
 class GraphicalWriter:
     
-    def __init__(self, lanes, data_buffer_size=500, plot_type=1):
+    def __init__(self, lanes, data_buffer_size=500, plot_type=1, app=None):
         self.lanes = lanes
         self.data_buffer_size = data_buffer_size
         self.plot_type = plot_type
-        self.app = QtGui.QApplication([])
+
+        if app == None :
+            self.app = QtGui.QApplication([])
+        else :
+            self.app = app
 
         self.plots = []
         self.curves = []
@@ -262,6 +272,7 @@ class GraphicalWriter:
 
         for l in lanes :
             p = pg.plot()
+            print 'type(p)', type(p)
             p.setWindowTitle('Inlusio Live-Plot: ' + str(l))
             p.showGrid(True,True)
             p.showButtons()
@@ -271,6 +282,7 @@ class GraphicalWriter:
                 p.setXRange(0,data_buffer_size,False)
             self.plots.append(p)
             self.curves.append(p.plot())
+            self.plt = p
         
         self.index = 0
         
@@ -286,10 +298,7 @@ class GraphicalWriter:
             return
         new_data = new_data[self.lanes]
         self.data[:,self.index] = new_data
-        # silly noise reduction #
-        #prev_index = (self.index-1)%self.data_buffer_size
-        # self.data[:,self.index] = (self.data[:,prev_index]*0.9 + self.data[:,self.index]*0.1)
-        # --------------------- #
+        
         self.index = (self.index+1)%self.data_buffer_size
     
     def update(self):
@@ -301,7 +310,7 @@ class GraphicalWriter:
                 plot_data = np.hstack([plot_data[self.index:],plot_data[:self.index]])
                 
             self.curves[l].setData(plot_data)
-            self.app.processEvents()
+        self.app.processEvents()
     
     def start(self):
         self.timer = QtCore.QTimer()
@@ -317,19 +326,29 @@ class AudioWriter:
         self.gsr_upper_limit = float('inf')
         self.gsr_lower_limit = -1.0
         
+        self.plot_mask = plot_mask
+
+        self.data_error_freq = 1500
         self.gsr_freq = 1000
         self.ecg_freq = 500
         
         self.duration = 500 # msecs
-        
+
         self.busy = False;
     
     def write(self, new_data) :
         if self.busy :
-            return 
+            return
         
-        ecg, gsr = new_data.split(',')
-        
+        new_data = new_data.split(',')
+
+        if len(new_data) != 2 :
+            self.busy = True
+            self.play_sound('data_error')
+            return
+
+        ecg, gsr = new_data
+
         if not is_float(ecg) :
             self.busy = True
             self.play_sound('ecg')
@@ -353,11 +372,17 @@ class AudioWriter:
         threading.Thread(target=_run).start()
     
     def _run(self, kind):
-        if kind == 'ecg' :
+        if kind == 'data_error' :
+            winsound.Beep(self.data_error_freq, self.duration)
+            print 'Incomming data format error !'
+        elif kind == 'ecg' :
             winsound.Beep(self.ecg_freq, self.duration)
+            print 'ecg problem !'
         elif kind == 'gsr' :
             winsound.Beep(self.gsr_freq, self.duration)
+            print 'gsr problem'
         self.busy = False
+
 
 class StreamManager:
 
@@ -365,9 +390,19 @@ class StreamManager:
         self.stream_reader = stream_reader
         self.writers = []
         self.is_running = False
+        self.jobs = []
 
     def addWriter(self,writer):
-        self.writers.append(writer)
+        if not self.is_running :
+            self.writers.append(writer)
+        else :
+            self.jobs.append(('add',writer))
+
+    def removeWriter(self,writer):
+        if not self.is_running :
+            self.writers.remove(writer)
+        else :
+            self.jobs.append(('rem',writer))
 
     def start(self):
         if self.is_running :
@@ -381,6 +416,22 @@ class StreamManager:
             data = self.stream_reader.read()
             for w in self.writers :
                 w.write(data)
+
+            if self.jobs == [] :
+                continue
+
+            jobs = self.jobs
+            self.jobs = []
+
+            for job in jobs :
+                if job[0] == 'add' :
+                    self.writers.append(job[1])
+                elif job[0] == 'rem' :
+                    self.writers.remove(job[1])
+                else :
+                    print 'No such job:', job[0]
+
+            print self.writers
 
     def stop(self):
         self.is_running = False
@@ -451,4 +502,3 @@ class UdpStreamer :
             yield line
             if(retcode is not None):
                 break
- 

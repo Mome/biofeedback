@@ -53,6 +53,8 @@ def main():
         reader = stream_manager.DummyStreamReader()
         plot_mask = [0,1]
 
+    # plot_labels = ['ecg','gsr']
+
     manager = stream_manager.StreamManager(reader)
     
     if 'terminal' in args.output :
@@ -98,7 +100,7 @@ def main():
         subject.add_record(record_number, filepath, session, start_time, source, sample_rate, column_labels, marker, comment)
     
     if 'audio' in args.output :
-        t_writer = stream_manager.AudioWriter()
+        t_writer = stream_manager.AudioWriter(plot_mask)
         manager.addWriter(t_writer)
     
     manager.start()
