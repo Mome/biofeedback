@@ -188,7 +188,7 @@ class FileWriter:
         subject_id = str(subject_id)
         session = str(session)
 
-        folder_path = os.path.normpath(conf.data_path + '/subject_' + subject_id)
+        folder_path = os.path.normpath(conf.data_path + os.sep +'subject_' + subject_id)
         file_beginning = 'physio_record_' + subject_id + '_' + session + '_'
 
         # find right file ending for data_delimiter
@@ -344,7 +344,7 @@ class AudioWriter:
         if len(new_data) != 2 :
             self.busy = True
             self.play_sound('data_error')
-            print 'data_error'
+            print 'data error'
             return
 
         ecg, gsr = new_data
@@ -352,23 +352,23 @@ class AudioWriter:
         if not is_float(ecg) :
             self.busy = True
             self.play_sound('ecg')
-            print 'ecg error'
+            print 'ecg error 1'
             return
             
         if not is_float(gsr) :
             self.busy = True
             self.play_sound('gsr')
-            print 'gsr_error'
+            print 'gsr error 1'
             return
         
         ecg = float(ecg) 
         gsr = float(gsr)
-
-        print ecg, gsr
         
         if self.ecg_upper_limit <= ecg or ecg <= self.ecg_lower_limit :
+            print 'ecg error 2'
             self.play_sound('ecg')
         elif self.gsr_upper_limit <= gsr or gsr <= self.gsr_lower_limit :
+            print 'gsr error 2'
             self.play_sound('gsr')
         
     def play_sound(self, kind):

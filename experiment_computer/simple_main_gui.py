@@ -35,20 +35,22 @@ class MainWindow(QMainWindow):
         gsr_box.addWidget(gsr_sound)
         gsr_box.addStretch(1)
 
-        terminal = TerminalButton()
+        terminal = TerminalButton(manager)
 
         record = RecordButton(manager)
 
         main_box = QVBoxLayout()
         main_box.addLayout(ecg_box)
         main_box.addLayout(gsr_box)
-        #main_box.addWidget(terminal)
+        main_box.addWidget(terminal)
         main_box.addWidget(record)
 
         main_widget = QWidget()
         main_widget.setLayout(main_box)
 
         self.setCentralWidget(main_widget)
+
+        #self.destroyed.connect
 
         self.manager = manager
         self.app = app
@@ -124,9 +126,6 @@ class RecordButton(QPushButton):
                 self.ignore_check = True
                 self.setChecked(True)
 
-            
-
-
 
 class PlotButton(QPushButton):
 
@@ -148,6 +147,8 @@ class PlotButton(QPushButton):
             self.manager.addWriter(self.graph)
             #self.graph.plt.destroyed.connect(self.window_closed)
             self.graph.start()
+            for d in dir(self.graph.plt) :
+                print d
         else :
             self.setStyleSheet("background-color: none")
             self.manager.removeWriter(self.graph)
@@ -158,16 +159,20 @@ class PlotButton(QPushButton):
 
 class TerminalButton(QPushButton):
 
-    def __init__(self):
+    def __init__(self, manager):
         QPushButton.__init__(self, 'print to terminal')
         self.toggled.connect(self.handle_action)
         self.setCheckable(True)
+        self.manager = manager
 
     def handle_action(self):
         if self.isChecked() :
             self.setStyleSheet("background-color: yellow")
+            self.writer = stream_manager.TermWriter()
+            self.manager.addWriter(self.writer)
         else :
             self.setStyleSheet("background-color: none")
+            self.manager.removeWriter(self.writer)
 
 class RecordDialog(QDialog):
 
@@ -216,14 +221,6 @@ class RecordDialog(QDialog):
             return
 
         self.accept()
-
-
-def main(args):
-
-    app = QApplication(args)
-    table = DataTable(data, 5, 3)
-    table.show()
-    sys.exit(app.exec_())
  
 if __name__ == '__main__':
 
@@ -236,4 +233,6 @@ if __name__ == '__main__':
     app = QApplication(sys.argv)
     main = MainWindow(manager, app)
     main.show()
-    sys.exit(app.exec_())
+    ex = app.exec_()
+    manager.stop()
+    sys.exit(ex)
