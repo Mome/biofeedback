@@ -200,8 +200,13 @@ class FileWriter:
             ending = '.ssv'
         else :
             ending = '.dsv'
+        
+        # put this to another place
+        if not os.path.exists(folder_path) :
+            os.makedirs(folder_path)
 
-        if record_number == None :
+        if record_number == None :#and os.path.exists(folder_path):
+            print 'folder_path', folder_path    
             file_list = os.listdir(folder_path)
             file_list = [f[len(file_beginning):-len(ending)] for f in file_list if f.startswith(file_beginning)]
             file_list = [int(f) for f in file_list if f.isdigit()]
@@ -222,10 +227,7 @@ class FileWriter:
         
         filename = file_beginning + record_number + ending
         
-        if not os.path.exists(folder_path) :
-            os.makedirs(folder_path)
-        
-        file_path =  folder_path + '/' + filename
+        file_path =  folder_path + os.sep + filename
         
         #if os.path.exists(file_ path) :
         #    raise Exception('File already exists. Wont overwrite data!')
