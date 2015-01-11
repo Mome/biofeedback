@@ -332,62 +332,61 @@ class AudioWriter:
         self.gsr_freq = 1000
         self.ecg_freq = 500
         
-        self.duration = 500 # msecs
+        self.duration = 100 # msecs
+        self.wait_time = 3
 
-        self.busy = False;
+        self.sound_list = []
     
     def write(self, new_data) :
         
-        if self.busy :
+        if len(self.sound_list) != 0 :
             return
         
         new_data = new_data.split(',')
 
         if len(new_data) != 2 :
-            self.busy = True
-            self.play_sound('data_error')
-            print 'data error'
+            self.sound_list.append('data_error')
             return
 
         ecg, gsr = new_data
 
         if not is_float(ecg) :
-            self.busy = True
-            self.play_sound('ecg')
-            print 'ecg error 1'
-            return
+            self.sound_list.append('ecg')
             
         if not is_float(gsr) :
-            self.busy = True
-            self.play_sound('gsr')
-            print 'gsr error 1'
+            self.sound_list.append('gsr')
+        
+        if not is_float(ecg) or not is_float(gsr) :
             return
         
         ecg = float(ecg) 
         gsr = float(gsr)
         
         if self.ecg_upper_limit <= ecg or ecg <= self.ecg_lower_limit :
-            print 'ecg error 2'
-            self.play_sound('ecg')
-        elif self.gsr_upper_limit <= gsr or gsr <= self.gsr_lower_limit :
-            print 'gsr error 2'
-            self.play_sound('gsr')
+            self.sound_list.append('ecg')
+        if self.gsr_upper_limit <= gsr or gsr <= self.gsr_lower_limit :
+            self.sound_list.append('gsr')
         
-    def play_sound(self, kind):
-        _run = lambda : self._run(kind)
-        threading.Thread(target=_run).start()
+        if len(self.sound_list) != 0 :
+            self.play_sound()
+        
+        
+    def play_sound(self):
+        threading.Thread(target=self._run).start()
     
-    def _run(self, kind):
-        if kind == 'data_error' :
-            winsound.Beep(self.data_error_freq, self.duration)
-            print 'Incomming data format error !'
-        elif kind == 'ecg' :
-            winsound.Beep(self.ecg_freq, self.duration)
-            print 'ecg problem !'
-        elif kind == 'gsr' :
-            winsound.Beep(self.gsr_freq, self.duration)
-            print 'gsr problem'
-        self.busy = False
+    def _run(self):
+	for kind in self.sound_list :
+            if kind == 'data_error' :
+                winsound.Beep(self.data_error_freq, self.duration)
+                print 'Input data format error !'
+            elif kind == 'ecg' :
+                winsound.Beep(self.ecg_freq, self.duration)
+                print 'ecg problem'
+            elif kind == 'gsr' :
+                winsound.Beep(self.gsr_freq, self.duration)
+                print 'gsr problem'
+        time.sleep(self.wait_time)
+        self.sound_list = []
 
 
 class StreamManager:
@@ -437,7 +436,7 @@ class StreamManager:
                 else :
                     print 'No such job:', job[0]
 
-            print self.writers
+            #print self.writers
 
     def stop(self):
         self.is_running = False

@@ -147,8 +147,7 @@ class PlotButton(QPushButton):
             self.manager.addWriter(self.graph)
             #self.graph.plt.destroyed.connect(self.window_closed)
             self.graph.start()
-            for d in dir(self.graph.plt) :
-                print d
+            
         else :
             self.setStyleSheet("background-color: none")
             self.manager.removeWriter(self.graph)
@@ -224,8 +223,8 @@ class RecordDialog(QDialog):
  
 if __name__ == '__main__':
 
-    #reader = stream_manager.SerialStreamReader('auto')
-    reader = stream_manager.DummyStreamReader()
+    reader = stream_manager.SerialStreamReader('auto')
+    #reader = stream_manager.DummyStreamReader()
     manager = stream_manager.StreamManager(reader)
 
     manager.start()
