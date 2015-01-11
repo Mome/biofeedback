@@ -326,8 +326,6 @@ class AudioWriter:
         self.gsr_upper_limit = float('inf')
         self.gsr_lower_limit = -1.0
         
-        self.plot_mask = plot_mask
-
         self.data_error_freq = 1500
         self.gsr_freq = 1000
         self.ecg_freq = 500
@@ -337,6 +335,7 @@ class AudioWriter:
         self.busy = False;
     
     def write(self, new_data) :
+        
         if self.busy :
             return
         
@@ -345,6 +344,7 @@ class AudioWriter:
         if len(new_data) != 2 :
             self.busy = True
             self.play_sound('data_error')
+            print 'data_error'
             return
 
         ecg, gsr = new_data
@@ -352,20 +352,24 @@ class AudioWriter:
         if not is_float(ecg) :
             self.busy = True
             self.play_sound('ecg')
+            print 'ecg error'
             return
             
         if not is_float(gsr) :
             self.busy = True
-            self.play_sound('gsr') 
+            self.play_sound('gsr')
+            print 'gsr_error'
             return
         
         ecg = float(ecg) 
         gsr = float(gsr)
+
+        print ecg, gsr
         
-        if self.ecg_upper_limit <= ecg <= self.ecg_lower_limit :
-            self.play_sound(self, 'ecg')
-        elif self.gsr_upper_limit <= gsr <= self.gsr_lower_limit :
-            self.play_sound(self, 'gsr')
+        if self.ecg_upper_limit <= ecg or ecg <= self.ecg_lower_limit :
+            self.play_sound('ecg')
+        elif self.gsr_upper_limit <= gsr or gsr <= self.gsr_lower_limit :
+            self.play_sound('gsr')
         
     def play_sound(self, kind):
         _run = lambda : self._run(kind)

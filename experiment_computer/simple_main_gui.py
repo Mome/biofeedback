@@ -56,11 +56,12 @@ class MainWindow(QMainWindow):
 
 class SoundButton(QPushButton):
 
-    def __init__(self):
-        QPushButton.__init__(self, manager)
+    def __init__(self, manager):
+        QPushButton.__init__(self)
         self.setIcon(QIcon('icons/sound_off_black.svg'))
         self.toggled.connect(self.handle_action)
         self.setCheckable(True)
+        self.manager = manager
 
 
     def handle_action(self):
@@ -70,8 +71,10 @@ class SoundButton(QPushButton):
             self.writer = stream_manager.AudioWriter()
             self.manager.addWriter(self.writer)
         else :
+            self.manager.removeWriter(self.writer)
             self.setIcon(QIcon('icons/sound_off_black.svg'))
             self.setStyleSheet("background-color: none")
+
 
 
 class RecordButton(QPushButton):
