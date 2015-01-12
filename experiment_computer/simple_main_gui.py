@@ -2,13 +2,14 @@
 
 import os
 import sys
-from time import sleep
+import time
 from thread import start_new_thread
 
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
 import configurations as conf
+import metadata
 import stream_manager
 from utils import is_int
 
@@ -20,29 +21,25 @@ class MainWindow(QMainWindow):
 
         self.resize(200, 150)
         self.setWindowTitle('Recorder')
+        self.setWindowIcon(QIcon('icon/ecg-icon.png'))
 
-        ecg_box = QHBoxLayout()
+        upper_box = QHBoxLayout()
         ecg_plot = PlotButton('plot ECG', 'ecg', manager)
-        ecg_sound = SoundButton(manager)
-        ecg_box.addWidget(ecg_plot)
-        ecg_box.addWidget(ecg_sound)
-        ecg_box.addStretch(1)
-
-        gsr_box = QHBoxLayout()
         gsr_plot = PlotButton('plot GSR', 'gsr', manager)
-        gsr_sound = SoundButton(manager)
-        gsr_box.addWidget(gsr_plot)
-        gsr_box.addWidget(gsr_sound)
-        gsr_box.addStretch(1)
+        upper_box.addWidget(ecg_plot)
+        upper_box.addWidget(gsr_plot)
 
-        terminal = TerminalButton(manager)
+        middle_box = QHBoxLayout()
+        terminal_button = TerminalButton(manager)
+        sound_button = SoundButton(manager)
+        middle_box.addWidget(terminal_button)
+        middle_box.addWidget(sound_button)
 
-        record = RecordButton(manager)
+        record = RecordButton(self, manager)
 
         main_box = QVBoxLayout()
-        main_box.addLayout(ecg_box)
-        main_box.addLayout(gsr_box)
-        main_box.addWidget(terminal)
+        main_box.addLayout(upper_box)
+        main_box.addLayout(middle_box)
         main_box.addWidget(record)
 
         main_widget = QWidget()
@@ -50,10 +47,22 @@ class MainWindow(QMainWindow):
 
         self.setCentralWidget(main_widget)
 
-        #self.destroyed.connect
-
         self.manager = manager
         self.app = app
+        self.recording = False
+
+    def canExit(self):
+        return not self.recording
+
+    def closeEvent(self, event):
+        # do stuff
+        if self.canExit() :
+            event.accept() # let the window close
+        else:
+            QMessageBox.warning(
+            self, 'Termination request refused !',
+            'You cannot close the application while recording data!')
+            event.ignore()
 
 
 class SoundButton(QPushButton):
@@ -81,12 +90,13 @@ class SoundButton(QPushButton):
 
 class RecordButton(QPushButton):
 
-    def __init__(self, manager):
+    def __init__(self, main_window, manager):
         QPushButton.__init__(self, 'RECORD')
         self.toggled.connect(self.handle_action)
         self.setCheckable(True)
         self.manager = manager
         self.ignore_check = False
+        self.main_window = main_window
 
     def handle_action(self):
 
@@ -105,12 +115,29 @@ class RecordButton(QPushButton):
                 self.setChecked(False)
                 return
 
+            self.main_window.recording = True
 
             self.setStyleSheet("background-color: red")
+
+            print 'rd.subject_id', rd.subject_id, type(rd.subject_id)
+
             file_path = stream_manager.FileWriter.construct_filepath(rd.subject_id, rd.session)
+
+            subject = metadata.Subject(rd.subject_id)
+            record_number = subject.get_next_record_number()
+            session = rd.session
+            filename = file_path.split(os.sep)[-1]
+            start_time = time.time()
+            source = 'arduino'
+            sample_rate = conf.default_sample_rate
+            column_labels = conf.default_coloumn_labels
+            marker = False
+            comment = ''      
+            subject.add_record(record_number, filename, session, start_time, source, sample_rate, column_labels, marker, comment)
+
+            
             self.writer = stream_manager.FileWriter(file_path)
             self.manager.addWriter(self.writer)
-
         else :
             self.setStyleSheet("background-color: none")
             quit_msg = "Are you sure you want to stop recording ?"
@@ -119,8 +146,9 @@ class RecordButton(QPushButton):
 
             if reply == QMessageBox.Yes:
                 self.manager.removeWriter(self.writer)
-                sleep(1)
+                time.sleep(1)
                 self.writer.close()
+                self.main_window.recording = False
             else:
                 self.setStyleSheet("background-color: red")
                 self.ignore_check = True
@@ -202,8 +230,9 @@ class RecordDialog(QDialog):
     def submit(self):
 
         #test subject_id
-        if is_int(self.subject_id_le.text()) and 100<=int(self.subject_id_le.text())<=999 :
-            self.subject_id = self.subject_id_le.text()     
+        subject_id = str(self.subject_id_le.text())
+        if is_int(subject_id) and 100<=int(subject_id)<=999 :
+            self.subject_id = subject_id    
         else:
             QMessageBox.warning(
             self, 'Invalid Subject ID !',
@@ -211,8 +240,9 @@ class RecordDialog(QDialog):
             return
 
         # test session
-        if self.session_le.text() in ['1','2','3','666'] :
-            self.session = self.session_le.text()
+        session = str(self.session_le.text())
+        if session in ['1','2','3','666'] :
+            self.session = session
         else :
             QMessageBox.warning(
             self, 'Invalid Session !',
@@ -223,8 +253,8 @@ class RecordDialog(QDialog):
  
 if __name__ == '__main__':
 
-    reader = stream_manager.SerialStreamReader('auto')
-    #reader = stream_manager.DummyStreamReader()
+    #reader = stream_manager.SerialStreamReader('auto')
+    reader = stream_manager.DummyStreamReader()
     manager = stream_manager.StreamManager(reader)
 
     manager.start()

@@ -332,8 +332,8 @@ class AudioWriter:
         self.gsr_freq = 1000
         self.ecg_freq = 500
         
-        self.duration = 100 # msecs
-        self.wait_time = 3
+        self.duration = 120 # msecs
+        self.wait_time = 2.5
 
         self.sound_list = []
     
@@ -391,19 +391,19 @@ class AudioWriter:
 
 class StreamManager:
 
-    def __init__(self,stream_reader):
+    def __init__(self, stream_reader):
         self.stream_reader = stream_reader
         self.writers = []
         self.is_running = False
         self.jobs = []
 
-    def addWriter(self,writer):
+    def addWriter(self, writer):
         if not self.is_running :
             self.writers.append(writer)
         else :
             self.jobs.append(('add',writer))
 
-    def removeWriter(self,writer):
+    def removeWriter(self, writer):
         if not self.is_running :
             self.writers.remove(writer)
         else :
