@@ -119,8 +119,6 @@ class RecordButton(QPushButton):
 
             self.setStyleSheet("background-color: red")
 
-            print 'rd.subject_id', rd.subject_id, type(rd.subject_id)
-
             file_path = stream_manager.FileWriter.construct_filepath(rd.subject_id, rd.session)
 
             subject = metadata.Subject(rd.subject_id)
@@ -173,15 +171,11 @@ class PlotButton(QPushButton):
             self.setStyleSheet("background-color: green")
             self.graph = stream_manager.GraphicalWriter(self.plot_mask, app=app)
             self.manager.addWriter(self.graph)
-            #self.graph.plt.destroyed.connect(self.window_closed)
             self.graph.start()
             
         else :
             self.setStyleSheet("background-color: none")
             self.manager.removeWriter(self.graph)
-
-    def window_closed(self):
-        print 'window_closed'
 
 
 class TerminalButton(QPushButton):

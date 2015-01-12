@@ -206,13 +206,11 @@ class FileWriter:
             os.makedirs(folder_path)
 
         if record_number == None :#and os.path.exists(folder_path):
-            print 'folder_path', folder_path    
             file_list = os.listdir(folder_path)
             file_list = [f[len(file_beginning):-len(ending)] for f in file_list if f.startswith(file_beginning)]
             file_list = [int(f) for f in file_list if f.isdigit()]
             if file_list == [] :
                 record_number = 0
-                print 'empty file_list'
             else :
                 record_number = max(file_list)+1
 
@@ -258,7 +256,7 @@ class TermWriter:
 
 class GraphicalWriter:
     
-    def __init__(self, lanes, data_buffer_size=500, plot_type=1, app=None):
+    def __init__(self, lanes, data_buffer_size=700, plot_type=1, app=None):
         self.lanes = lanes
         self.data_buffer_size = data_buffer_size
         self.plot_type = plot_type
@@ -274,7 +272,6 @@ class GraphicalWriter:
 
         for l in lanes :
             p = pg.plot()
-            print 'type(p)', type(p)
             p.setWindowTitle('Inlusio Live-Plot: ' + str(l))
             p.showGrid(True,True)
             p.showButtons()
