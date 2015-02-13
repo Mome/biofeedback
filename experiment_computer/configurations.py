@@ -2,6 +2,7 @@
 data_path = '~/inlusio_data'
 metadata_path = '~/inlusio_data'
 appdata_path = '~/inlusio_data'
+netstore_path = "//samba.ikw.uos.de/dfs/store/nbp/inlusio_data"
 data_delimiter = ','
 
 default_coloumn_labels = ['relative_time','ecg','gsr']

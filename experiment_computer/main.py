@@ -22,8 +22,8 @@ def main():
         args.input = ['arduino','raspi','dummy'][int(i)-1]
     
     if args.output == None :
-        num = raw_input('Choose any output - 1 for Terminal ,  2 for Graphical  or  3 for File : ')
-        choices = ['terminal','graphical','file']
+        num = raw_input('Choose any output - 1 for Terminal ,  2 for Graphical,  3 for File  or 4 for Audio: ')
+        choices = ['terminal','graphical','file','audio']
         args.output=[]
         for i in num :
             args.output.append(choices[int(i)-1])
@@ -52,6 +52,8 @@ def main():
     elif args.input == 'dummy':
         reader = stream_manager.DummyStreamReader()
         plot_mask = [0,1]
+
+    # plot_labels = ['ecg','gsr']
 
     manager = stream_manager.StreamManager(reader)
     
@@ -96,7 +98,11 @@ def main():
         comment = ''
         source = args.input
         subject.add_record(record_number, filepath, session, start_time, source, sample_rate, column_labels, marker, comment)
-
+    
+    if 'audio' in args.output :
+        t_writer = stream_manager.AudioWriter(plot_mask)
+        manager.addWriter(t_writer)
+    
     manager.start()
     
     # ------------------------------ #
