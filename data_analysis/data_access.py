@@ -3,6 +3,8 @@
 Created on Fri Feb 13 16:02:50 2015
 
 @author: Lukas
+@desc: Data access module. Contains all the methods to grab data from the 
+sqlite-Database and the .csv-files for the physiological data.
 """
 import sqlite3
 import pandas as pd
@@ -20,3 +22,4 @@ def get_game_data(subject_number, session_id = None, trial_id = None):
     df = pd.read_sql(sql, con)
     return df
 
+def get_physio_data(subject_number, session_id = None)
