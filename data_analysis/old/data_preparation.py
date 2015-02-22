@@ -43,8 +43,6 @@ def load_subject_data(subject_id, session):
     if physio_record_start == -1 :
         raise Exception('Filename ' + file_names[0] + 'of metafile not found in subject folder!')  
 
-	
-
 	return physio_record, parameters, stressors
 
 
