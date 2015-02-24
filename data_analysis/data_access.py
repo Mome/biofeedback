@@ -11,10 +11,11 @@ import pathlib
 import sqlite3
 
 import pandas as pd
+import yaml
 
 
 PATH_TO_DB = 'C:/Users/Lukas/SkyDrive/Dokumente/Master/02 Semester/inlusio/InlusioDB_2015-01-26.sqlite'
-PHYSIO_PATH = os.path.expanduser('~/inlusio_data') #this makes it a little bit more platform independent
+PHYSIO_PATH = os.path.expanduser('~/code/biofeedback/data_analysis/inlusio_data')
 
 
 def get_game_data(subject_number, session_id = None, trial_id = None):    
@@ -34,16 +35,49 @@ def get_physio_data(subject_id, session_id):
     """reads data of physiological measurement from csv. Concatinates multiple records for one session."""
     subject_id = str(subject_id)
     session_id = str(session_id)
-    subject_path = pathlib.Path(PHYSIO_PATH + '/subject_' + subject)
+    
+    subject_path = pathlib.Path(PHYSIO_PATH + '/subject_' + subject_id)
+    meta_file_path = subject_path.joinpath('physio_meta_' + subject_id + '.yml') 
     
     if not subject_path.exists() :
         raise Exception('Subject folder not found !')
     
-    # load metadata
+    # open metadata file
+    with meta_file_path.open() as yaml_file :
+        physio_meta = yaml.load(yaml_file.read())
 
-    # load recodrs
-    pd.read_csv
+    # construct list of record starting times
+    starting_times = [(rec['number'], float(rec['start_time']))  for rec in physio_meta['records']]
+    starting_times = dict(starting_times)
+    print(starting_times)
 
+    # load recodrs and set to absolute time
+    column_names = ['time','ecg','gsr']
+    physio_data = pd.DataFrame(columns=column_names)
+    pattern = 'physio_record_' + subject_id + '_' + session_id + '_*.csv'
 
-
-
+    for record_path in subject_path.glob(pattern) :
+       
+        # load physio_data
+        physio_record = pd.read_csv(
+            str(record_path),
+            comment='#',
+            header=None,
+            names = column_names
+            )
+        
+        # convert physio time to seconds
+        physio_record['time'] /= 1000
+        
+        # convert to absolute time
+        record_number = int(record_path.stem.split('_')[-1])
+        s_time = starting_times[record_number]
+        physio_record['time'] += s_time
+        
+        # concatinate to other records
+        physio_data = physio_data.append(physio_record, ignore_index=True)
+    
+    # sort records by time
+    # ... maybe not important
+   
+    return physio_data
