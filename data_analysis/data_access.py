@@ -14,15 +14,15 @@ import pandas as pd
 import yaml
 
 
-PATH_TO_DB = 'C:/Users/Lukas/SkyDrive/Dokumente/Master/02 Semester/inlusio/InlusioDB_2015-01-26.sqlite'
+PATH_TO_DB = os.path.expanduser('~/SkyDrive/Dokumente/Master/02 Semester/inlusio/InlusioDB_150225.sqlite')
 PHYSIO_PATH = os.path.expanduser('~/code/biofeedback/data_analysis/inlusio_data')
 
 
-def get_game_data(subject_number, session_id = None, trial_id = None):    
+def get_game_data(subject_number, session_number = None, trial_id = None):    
     con = sqlite3.connect(PATH_TO_DB)
     sql = "select * from TRIALS_WITH_STATUS_NOT_NULL where Subject_number = " + str(subject_number)
-    if (session_id is not None ):
-        sql += " and Session_id = " + str(session_id)
+    if (session_number is not None ):
+        sql += " and SessionNumber = " + str(session_number)
     if (trial_id is not None ):
         sql += " and Trial_id = " + str(trial_id)
     
