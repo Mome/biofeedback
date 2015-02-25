@@ -14,8 +14,8 @@ import pandas as pd
 import yaml
 
 
-PATH_TO_DB = 'C:/Users/Lukas/SkyDrive/Dokumente/Master/02 Semester/inlusio/InlusioDB_2015-01-26.sqlite'
-PHYSIO_PATH = os.path.expanduser('~/code/biofeedback/data_analysis/inlusio_data')
+PATH_TO_DB = os.path.expanduser('~/code/biofeedback/data/InlusioDB.sqlite')
+PHYSIO_PATH = os.path.expanduser('~/code/biofeedback/data/inlusio_data')
 
 
 def get_game_data(subject_number, session_id = None, trial_id = None):    
@@ -30,14 +30,13 @@ def get_game_data(subject_number, session_id = None, trial_id = None):
     return df
 
 
-
-def get_physio_data(subject_id, session_id):
+def get_physio_data(subject_num, session_num):
     """reads data of physiological measurement from csv. Concatinates multiple records for one session."""
-    subject_id = str(subject_id)
-    session_id = str(session_id)
+    subject_num = str(subject_num)
+    session_num = str(session_num)
     
-    subject_path = pathlib.Path(PHYSIO_PATH + '/subject_' + subject_id)
-    meta_file_path = subject_path.joinpath('physio_meta_' + subject_id + '.yml') 
+    subject_path = pathlib.Path(PHYSIO_PATH + '/subject_' + subject_num)
+    meta_file_path = subject_path.joinpath('physio_meta_' + subject_num + '.yml') 
     
     if not subject_path.exists() :
         raise Exception('Subject folder not found !')
@@ -54,7 +53,7 @@ def get_physio_data(subject_id, session_id):
     # load recodrs and set to absolute time
     column_names = ['time','ecg','gsr']
     physio_data = pd.DataFrame(columns=column_names)
-    pattern = 'physio_record_' + subject_id + '_' + session_id + '_*.csv'
+    pattern = 'physio_record_' + subject_num + '_' + session_num + '_*.csv'
 
     for record_path in subject_path.glob(pattern) :
        
@@ -79,5 +78,6 @@ def get_physio_data(subject_id, session_id):
     
     # sort records by time
     # ... maybe not important
+    physio_data = physio_data.sort('time')
    
     return physio_data
