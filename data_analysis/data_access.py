@@ -17,6 +17,17 @@ import yaml
 PATH_TO_DB = os.path.expanduser('~/SkyDrive/Dokumente/Master/02 Semester/inlusio/InlusioDB_150225.sqlite')
 PHYSIO_PATH = os.path.expanduser('~/code/biofeedback/data_analysis/inlusio_data')
 
+def get_block_times(subject_number, session_number):
+    if (subject_number is None):
+        return None
+    con = sqlite3.connect(PATH_TO_DB)
+    sql = "select * from BLOCK_TIMES where Subject_number = " + str(subject_number)
+    if (session_number is not None ):
+        sql += " and SessionNumber = " + str(session_number)
+    
+    df = pd.read_sql(sql, con)
+    return df
+    
 
 def get_game_data(subject_number, session_number = None, trial_id = None):    
     con = sqlite3.connect(PATH_TO_DB)
