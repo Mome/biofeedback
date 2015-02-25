@@ -4,14 +4,15 @@ import os
 import sys
 from thread import start_new_thread
 
+from pylab import *
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
-sys.path.append('../experiment_computer')
+sys.path.append('../../experiment_computer')
 
 import configurations as conf
 from fancy_physio_plot import process_data
-import pylab_embedd
+from data_preparation import get_session_files
 from utils import *
 
 
@@ -119,7 +120,6 @@ class PlotSettingsWidget(QWidget):
         self.meta_file = meta_file
         self.scores_file = scores_file
 
-
     def plot_data(self) :
         physio_record_file = self.session_d['physio_record'][0] #this is assumed to have length one at this point
         parameters_file = self.session_d['parameters']
@@ -131,6 +131,7 @@ class PlotSettingsWidget(QWidget):
         #plot_window.show()
         self.plots.append(plt)
         print 'done'
+
 
 def main(args):
     app = QApplication(args)

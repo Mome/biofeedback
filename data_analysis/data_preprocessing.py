@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from pylab import *
 
 def filter_ecg(ecg_signal) :
@@ -41,3 +42,19 @@ def low_pass(signal, kernel_type, kernel_size):
     factor = sum(signal)/sum(out)
     
     return out*factor
+=======
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Feb 25 13:48:34 2015
+
+@author: Lukas
+"""
+from data_access import *
+
+def change_block_times_format(df):
+    list = []
+    for index, row in df.iterrows():
+        tupel = (row['StartTimeTrial'],row['EndTimeTrial'], row['Type'])
+        list.append(tupel)
+    return list
+>>>>>>> 9404d89d02f3db6a0d67f5c25b3b3d25d3e2e882
