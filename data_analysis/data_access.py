@@ -6,17 +6,22 @@ Created on Fri Feb 13 16:02:50 2015
 @desc: Data access module. Contains all the methods to grab data from the 
 sqlite-Database and the .csv-files for the physiological data.
 """
+import datetime
 import os
 import pathlib
 import sqlite3
 
+import numpy
 import pandas as pd
 import yaml
 
 
-PATH_TO_DB = os.path.expanduser('~/code/biofeedback/data/InlusioDB.sqlite')
-PATH_TO_DB = os.path.expanduser('~/SkyDrive/Dokumente/Master/02 Semester/inlusio/InlusioDB_150225.sqlite')
+#PATH_TO_DB = os.path.expanduser('~/code/biofeedback/data/InlusioDB.sqlite')
+#PATH_TO_DB = os.path.expanduser('~/inlusio_data/InlusioDB_150225.sqlite')
+PATH_TO_DB = os.path.expanduser('~/inlusio_data/InlusioDB_260225.sqlite')
+#PATH_TO_DB = os.path.expanduser('~/SkyDrive/Dokumente/Master/02 Semester/inlusio/InlusioDB_150225.sqlite')
 PHYSIO_PATH = os.path.expanduser('~/code/biofeedback/data_analysis/inlusio_data')
+
 
 def get_block_times(subject_number, session_number):
     if (subject_number is None):
@@ -27,6 +32,8 @@ def get_block_times(subject_number, session_number):
         sql += " and SessionNumber = " + str(session_number)
     
     df = pd.read_sql(sql, con)
+    df['StartTimeTrial'] = ( pd.to_datetime(df['StartTimeTrial']) - datetime.datetime(1970,1,1) ) / numpy.timedelta64(1,'s')
+    df['EndTimeTrial'] = ( pd.to_datetime(df['EndTimeTrial']) - datetime.datetime(1970,1,1) ) / numpy.timedelta64(1,'s')
     return df
     
 
@@ -39,6 +46,7 @@ def get_game_data(subject_number, session_number = None, trial_id = None):
         sql += " and Trial_id = " + str(trial_id)
     
     df = pd.read_sql(sql, con)
+    # ToDo: convert times to seconds
     return df
 
 
@@ -89,7 +97,6 @@ def get_physio_data(subject_num, session_num):
         physio_data = physio_data.append(physio_record, ignore_index=True)
     
     # sort records by time
-    # ... maybe not important
     physio_data = physio_data.sort('time')
    
     return physio_data

@@ -1,12 +1,19 @@
-<<<<<<< HEAD
+# -*- coding: utf-8 -*-
+"""
+Created on Wed Feb 25 13:48:34 2015
+
+@author: Lukas
+"""
 from pylab import *
+
+from data_access import *
+
 
 def filter_ecg(ecg_signal) :
 	pass
 
 def filter_gsr(gsr_signal):
 	pass
-
 
 
 # my low pass function replace with something propper
@@ -42,14 +49,7 @@ def low_pass(signal, kernel_type, kernel_size):
     factor = sum(signal)/sum(out)
     
     return out*factor
-=======
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Feb 25 13:48:34 2015
 
-@author: Lukas
-"""
-from data_access import *
 
 def change_block_times_format(df):
     list = []
@@ -57,4 +57,3 @@ def change_block_times_format(df):
         tupel = (row['StartTimeTrial'],row['EndTimeTrial'], row['Type'])
         list.append(tupel)
     return list
->>>>>>> 9404d89d02f3db6a0d67f5c25b3b3d25d3e2e882
