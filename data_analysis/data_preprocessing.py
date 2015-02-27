@@ -8,6 +8,7 @@ from pylab import *
 
 from data_access import *
 from rpeakdetect import detect_beats
+import scipy.ndimage
 
 
 def process_ecg(ecg_signal, time_scale) :
@@ -25,10 +26,15 @@ def process_ecg(ecg_signal, time_scale) :
     hrv = None
     return beats, heart_rate, hrv
 
+"""
+gsr_signal := list of gsr values? Moritz? --> die get_physio_data gibt dir den dataframe, den du brauchst
+"""
 def filter_gsr(gsr_signal):
-    # lowpass filter
-	pass
 
+    # resample signal with cubic interpolation --> glättet Graph ein wenig
+    gsr_signal = scipy.ndimage.zoom(gsr_signal, 2, order=3)
+    # filter signal somehow?? e.g. http://neuroelf.net/wiki/doku.php?id=gsr_data_analysis
+    
 
 # my low pass function replace with something propper
 def low_pass(signal, kernel_type, kernel_size):
