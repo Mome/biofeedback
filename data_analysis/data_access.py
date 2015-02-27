@@ -20,7 +20,7 @@ import yaml
 #PATH_TO_DB = os.path.expanduser('~/inlusio_data/InlusioDB_150225.sqlite')
 PATH_TO_DB = os.path.expanduser('~/inlusio_data/InlusioDB_260225.sqlite')
 #PATH_TO_DB = os.path.expanduser('~/SkyDrive/Dokumente/Master/02 Semester/inlusio/InlusioDB_150225.sqlite')
-PHYSIO_PATH = os.path.expanduser('~/code/biofeedback/data_analysis/inlusio_data')
+PHYSIO_PATH = os.path.expanduser('~/code/biofeedback/data/inlusio_data')
 
 
 def get_block_times(subject_number, session_number):
@@ -32,8 +32,14 @@ def get_block_times(subject_number, session_number):
         sql += " and SessionNumber = " + str(session_number)
     
     df = pd.read_sql(sql, con)
+
+    # convert to seconds since epoche
     df['StartTimeTrial'] = ( pd.to_datetime(df['StartTimeTrial']) - datetime.datetime(1970,1,1) ) / numpy.timedelta64(1,'s')
     df['EndTimeTrial'] = ( pd.to_datetime(df['EndTimeTrial']) - datetime.datetime(1970,1,1) ) / numpy.timedelta64(1,'s')
+    
+    # convert to UTC
+    df['StartTimeTrial'] -= 3600
+    df['EndTimeTrial'] -= 3600
     return df
     
 
@@ -58,6 +64,7 @@ def get_physio_data(subject_num, session_num):
     subject_path = pathlib.Path(PHYSIO_PATH + '/subject_' + subject_num)
     meta_file_path = subject_path.joinpath('physio_meta_' + subject_num + '.yml') 
     
+    print(subject_path)
     if not subject_path.exists() :
         raise Exception('Subject folder not found !')
     
@@ -95,8 +102,8 @@ def get_physio_data(subject_num, session_num):
         
         # concatinate to other records
         physio_data = physio_data.append(physio_record, ignore_index=True)
-    
+        
     # sort records by time
     physio_data = physio_data.sort('time')
-   
+    
     return physio_data

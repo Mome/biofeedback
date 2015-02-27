@@ -1,27 +1,10 @@
-from data_access import *
-from data_preprocessing import *
 from pylab import *
 
-def boring_plot(subject, session):
-    df = get_physio_data(subject, session)
-    time = array(df['time'])
-    ecg = array(df['ecg'])
-    gsr = array(df['gsr'])
-    print(gsr.dtype)
-    print(len(gsr))
-    #gsr = low_pass(gsr,'cos',100)
-    #print(len(gsr))
-    #plot(time,ecg)
-    figure()
-    title(str(subject)+'_'+str(session))
-    plot(time,gsr)
-    #savefig(str(subject)+'_'+str(session)+'.png')
-    show()
+import data_preprocessing as dpp
+import data_access as da
 
-    print(gsr)
 
-"""
-def plot_with_backcolors(x_axis_divisions, colors, graph_data, figure):
+def plot_with_backcolors(block_times, signal, time_scale):
     import matplotlib.pyplot as plt
     import matplotlib.collections as collections
 
@@ -29,32 +12,68 @@ def plot_with_backcolors(x_axis_divisions, colors, graph_data, figure):
     ax = figure.add_subplot(111)
 
     # Plot your own data here
-    ax.plot(graph_data[0], graph_data[1])
+    ax.plot(time_scale, signal)
 
-    xad = list(copy(x_axis_divisions))
+    #xad = list(copy(x_axis_divisions))
     #xad.append(graph_data[0][-1])
-    xranges = [(xad[i],xad[i+1]-xad[i]) for i in xrange(len(xad)-1)]
+    #xranges = [(xad[i],xad[i+1]-xad[i]) for i in range(len(xad)-1)]
+    starts, ends, colors = zip(*block_times)
+    print('starts', starts, diff(starts))
+    print('ends', ends, diff(ends))
+    xranges = [(start, end-start)for start, end in zip(starts, ends)]
+    print(xranges, colors)
     yrange = (0, 15)
-    def color_choice(color_code):
-        if color_code == 0:
-            return 'purple'
-        elif color_code == 1:
+
+    def color_choice(condition):
+        
+        if condition == 'Easy':
             return 'green'
-        elif color_code == 2:
+        if condition == 'Hard':
             return 'red'
-        elif color_code == 3:
+        if condition == 'Explain':
             return 'yellow'
-        elif color_code == 4:
-            return 'blue'
-        elif color_code == 5:
+        if condition == 'PreBaseline':
             return 'grey'
-        elif color_code == 6:
-            return 'white'
+        if condition == 'PostBaseline' :
+            return 'grey'
+        if condition == 'Easy-False':
+            return 'blue'
+        if condition == 'Hard-False':
+            return 'purple'
+        
+        print('WTF dunno condition:', condition)
+        return 'black'
 
     colors = [color_choice(color_code) for color_code in colors]
 
-    for i in xrange(len(xranges)) :
+    for i in range(len(xranges)) :
         coll = collections.BrokenBarHCollection([xranges[i]], yrange, facecolor=colors[i], alpha=0.5)
         ax.add_collection(coll)
 
-    return figure"""
+    return figure
+
+
+if __name__ == '__main__' :
+    import sys
+    args = sys.argv
+
+    subject = args[1]
+    session = args[2]
+
+    game_data = da.get_game_data(subject, session)
+
+    physio_data = da.get_physio_data(subject, session)
+    physio_time = array(physio_data['time'])
+    ecg_signal = array(physio_data['ecg'])
+    gsr_signal = array(physio_data['gsr'])
+
+    blocks = da.get_block_times(subject, session)
+    blocks = dpp.change_block_times_format(blocks)
+
+    print(blocks)
+
+    #beats, hr, hrv = dpp.process_ecg(ecg_signal, physio_time)
+
+    plot_with_backcolors(blocks, gsr_signal, physio_time)
+
+    show()

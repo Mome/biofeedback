@@ -3,6 +3,7 @@ import numpy as np
 import scipy.signal
 import scipy.ndimage
 
+
 def detect_beats(
 		ecg,	# The raw ECG signal
 		rate,	# Sampling rate in HZ
@@ -35,7 +36,7 @@ def detect_beats(
 	# Robust threshold and normalizator estimation
 	thresholds = []
 	max_powers = []
-	for i in range(len(decg_power)/ransac_window_size):
+	for i in range(int(len(decg_power)/ransac_window_size)):
 		sample = slice(i*ransac_window_size, (i+1)*ransac_window_size)
 		d = decg_power[sample]
 		thresholds.append(0.5*np.std(d))
@@ -65,6 +66,7 @@ def detect_beats(
 	zero_crossings -= 1
 	return zero_crossings
 
+
 def plot_peak_detection(ecg, rate):
 	import matplotlib.pyplot as plt
 	dt = 1.0/rate
@@ -74,6 +76,7 @@ def plot_peak_detection(ecg, rate):
 	peak_i = detect_beats(ecg, rate)
 	plt.scatter(t[peak_i], ecg[peak_i], color='red')
 	plt.show()
+
 
 if __name__ == '__main__':
 	rate = float(sys.argv[1])

@@ -7,12 +7,26 @@ Created on Wed Feb 25 13:48:34 2015
 from pylab import *
 
 from data_access import *
+from rpeakdetect import detect_beats
 
 
-def filter_ecg(ecg_signal) :
-	pass
+def process_ecg(ecg_signal, time_scale) :
+    # detect spikes
+    sampling_rate = 1/mean(diff(time_scale))
+    print('sampleing rate:', sampling_rate)
+    beats = detect_beats(ecg_signal, sampling_rate)
+    plot(ecg_signal)
+    print(beats)
+    heart_rate = 1/mean(diff(beats))
+    # fill unrecognized zones
+    # calculate heart rate
+    rate = None
+    # calculate HRV
+    hrv = None
+    return beats, heart_rate, hrv
 
 def filter_gsr(gsr_signal):
+    # lowpass filter
 	pass
 
 
