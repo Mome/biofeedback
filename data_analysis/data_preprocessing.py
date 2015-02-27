@@ -7,13 +7,20 @@ Created on Wed Feb 25 13:48:34 2015
 from pylab import *
 
 from data_access import *
+import scipy.ndimage
 
 
 def filter_ecg(ecg_signal) :
 	pass
 
+"""
+gsr_signal := list of gsr values? Moritz?
+"""
 def filter_gsr(gsr_signal):
-	pass
+    # resample signal with cubic interpolation --> glättet Graph ein wenig
+    gsr_signal = scipy.ndimage.zoom(gsr_signal, 2, order=3)
+    # filter signal somehow?? e.g. http://neuroelf.net/wiki/doku.php?id=gsr_data_analysis
+    
 
 
 # my low pass function replace with something propper
