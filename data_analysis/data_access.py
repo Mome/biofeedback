@@ -6,6 +6,7 @@ Created on Fri Feb 13 16:02:50 2015
 @desc: Data access module. Contains all the methods to grab data from the 
 sqlite-Database and the .csv-files for the physiological data.
 """
+import configparser
 import datetime
 import os
 import pathlib
@@ -14,13 +15,6 @@ import sqlite3
 import numpy
 import pandas as pd
 import yaml
-
-
-#PATH_TO_DB = os.path.expanduser('~/code/biofeedback/data/InlusioDB.sqlite')
-#PATH_TO_DB = os.path.expanduser('~/inlusio_data/InlusioDB_150225.sqlite')
-PATH_TO_DB = os.path.expanduser('~/inlusio_data/InlusioDB_260225.sqlite')
-#PATH_TO_DB = os.path.expanduser('~/SkyDrive/Dokumente/Master/02 Semester/inlusio/InlusioDB_150225.sqlite')
-PHYSIO_PATH = os.path.expanduser('~/code/biofeedback/data/inlusio_data')
 
 
 def get_block_times(subject_number, session_number):
@@ -107,3 +101,37 @@ def get_physio_data(subject_num, session_num):
     physio_data = physio_data.sort('time')
     
     return physio_data
+
+
+def load_configurations() :
+    """ Loads the location of the physio data and database.
+    Creates configfile if no file can be found."""
+
+    local_path = os.path.dirname(os.path.abspath(__file__))
+    file_path = local_path + os.sep + 'conf.ini'
+    parser = configparser.ConfigParser()
+
+    if os.path.exists(file_path) :
+        config = parser.read(file_path)
+    else :
+        parser['PATH'] = {}
+        parser['PATH']['PATH_TO_DB'] = os.path.expanduser('~/inlusio_data/InlusioDB_260225.sqlite')
+        parser['PATH']['PHYSIO_PATH'] = os.path.expanduser('~/inlusio_data')
+        print('Creating new configuration file!!!')
+        print('Please fit conf.ini to your local data path!')
+        with open(file_path, 'w') as configfile:
+            parser.write(configfile)
+
+    return parser
+
+
+config = load_configurations()
+
+#PATH_TO_DB = os.path.expanduser('~/code/biofeedback/data/InlusioDB.sqlite')
+#PATH_TO_DB = os.path.expanduser('~/inlusio_data/InlusioDB_150225.sqlite')
+#PATH_TO_DB = os.path.expanduser('~/inlusio_data/InlusioDB_260225.sqlite')
+#PATH_TO_DB = os.path.expanduser('~/SkyDrive/Dokumente/Master/02 Semester/inlusio/InlusioDB_150225.sqlite')
+#PHYSIO_PATH = os.path.expanduser('~/code/biofeedback/data/inlusio_data')
+
+PATH_TO_DB = config['PATH']['PATH_TO_DB']
+PHYSIO_PATH = config['PATH']['PHYSIO_PATH']
