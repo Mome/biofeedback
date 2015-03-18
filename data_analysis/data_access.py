@@ -28,18 +28,35 @@ def get_block_times(subject_number, session_number):
     df = pd.read_sql(sql, con)
 
     # convert to seconds since epoche
-    df['StartTimeTrial'] = ( pd.to_datetime(df['StartTimeTrial']) - datetime.datetime(1970,1,1) ) / numpy.timedelta64(1,'s')
-    df['EndTimeTrial'] = ( pd.to_datetime(df['EndTimeTrial']) - datetime.datetime(1970,1,1) ) / numpy.timedelta64(1,'s')
+    #print(df['EndTimeTrial'][0])
+    df['StartTimeTrial'] = pd.to_datetime(df['StartTimeTrial'])
+    df['EndTimeTrial']   = pd.to_datetime(df['EndTimeTrial'])
+    #print(type(df['EndTimeTrial'][0]))
+    df['StartTimeTrial'] = ( df['StartTimeTrial'] - datetime.timedelta(hours=1) - datetime.datetime(1970,1,1) ) / numpy.timedelta64(1,'s')
+    df['EndTimeTrial']   = ( df['EndTimeTrial']   - datetime.timedelta(hours=1) - datetime.datetime(1970,1,1) ) / numpy.timedelta64(1,'s')
     
     # convert to UTC
-    df['StartTimeTrial'] -= 3600
-    df['EndTimeTrial'] -= 3600
+    #df['StartTimeTrial'] -= 3600
+    #df['EndTimeTrial'] -= 3600
     return df
+
+
+def raw_block_times(subject_number, session_number):
+    if (subject_number is None):
+        return None
+    con = sqlite3.connect(PATH_TO_DB)
+    sql = "select * from BLOCK_TIMES where Subject_number = " + str(subject_number)
+    if (session_number is not None ):
+        sql += " and SessionNumber = " + str(session_number)
     
+    df = pd.read_sql(sql, con)
+
+    return df  
+
 
 def get_game_data(subject_number, session_number = None, trial_id = None):    
     con = sqlite3.connect(PATH_TO_DB)
-    sql = "select * from TRIALS_WITH_STATUS_NOT_NULL where Subject_number = " + str(subject_number)
+    sql = "select * from TRIALS_WITH_STATUS where Subject_number = " + str(subject_number)
     if (session_number is not None ):
         sql += " and SessionNumber = " + str(session_number)
     if (trial_id is not None ):
@@ -58,7 +75,7 @@ def get_physio_data(subject_num, session_num):
     subject_path = pathlib.Path(PHYSIO_PATH + '/subject_' + subject_num)
     meta_file_path = subject_path.joinpath('physio_meta_' + subject_num + '.yml') 
     
-    print(subject_path)
+    #print(subject_path)
     if not subject_path.exists() :
         raise Exception('Subject folder not found !')
     
@@ -69,7 +86,7 @@ def get_physio_data(subject_num, session_num):
     # construct list of record starting times
     starting_times = [(rec['number'], float(rec['start_time']))  for rec in physio_meta['records']]
     starting_times = dict(starting_times)
-    print(starting_times)
+    #print(starting_times)
 
     # load recodrs and set to absolute time
     column_names = ['time','ecg','gsr']
@@ -108,6 +125,7 @@ def load_configurations() :
     Creates configfile if no file can be found."""
 
     local_path = os.path.dirname(os.path.abspath(__file__))
+    print(local_path)
     file_path = local_path + os.sep + 'conf.ini'
     parser = configparser.ConfigParser()
 
