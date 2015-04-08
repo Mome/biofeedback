@@ -51,12 +51,6 @@ def get_filtered_plot(subject, session):
     return no_filter_lot, filter_lot, block_time_str
 
 
-def plot_without_connections :
-    """ split signals into segments of seperate plots, if the distance between two sample 
-    points deviates to much from the median """
-    pass
-
-
 def plot_with_backcolors(block_times, signal, time_scale):
     import matplotlib.pyplot as plt
     import matplotlib.collections as collections

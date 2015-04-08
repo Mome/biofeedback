@@ -13,10 +13,10 @@ session = argv[2]
 game_data = da.get_game_data2(subject, session)
 
 physio_data = da.get_physio_data(subject, session)
-time_scale = physio_data['time']
+time_scale = array(physio_data['time'])
 
 # convert time scales to minues
-#time_scale = time_scale/60
+time_scale /= 60
 mts = min(time_scale)
 time_scale = time_scale-mts
 
