@@ -16,14 +16,14 @@ physio_data = da.get_physio_data(subject, session)
 time_scale = array(physio_data['time'])
 
 # convert time scales to minues
-time_scale /= 60
+#time_scale /= 60
 mts = min(time_scale)
 time_scale = time_scale-mts
 
 ecg_signal = signal.EcgSignal( time_scale, physio_data['ecg'] )
 ecg_signal.interpolate_nans()
 ecg_signal.detect_beats()
-#ecg_signal.interpolate_unrecognized_beats()
+ecg_signal.interpolate_unrecognized_beats()
 #ecg_signal.remove_holes()
 
 gsr_signal = signal.GsrSignal( time_scale, physio_data['gsr'] )

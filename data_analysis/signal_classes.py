@@ -91,8 +91,10 @@ class EcgSignal(Signal):
                     print('gap',gap_size, 'at', i)
                     # add additional beat
                     index1 = beats[i]
-                    index2 = beats[i+1]
-                    new_beats += [int(n) for n in np.linspace(index1,index2,gap_size-1)]
+                    index2 = beats[i+1] 
+                    temp = list(np.linspace(index1,index2,gap_size+1))[1:-1]
+                    new_beats += temp
+                    print('left_index:', index1, 'right_index:', index2, 'new_beat', temp)
 
         beats = np.concatenate((beats,new_beats), axis=0)
         beats.sort()
