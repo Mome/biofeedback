@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Wed Feb 25 13:48:34 2015
-
-@author: Lukas
-"""
 import datetime
 import time
 
@@ -46,17 +40,20 @@ def process_gsr(gsr_signal, time_scale):
 
 
 def process_ecg(ecg_signal, time_scale) :
+
     # remove nans
     ecg_signal = interpolate_nans(ecg_signal)
+
+    # remove fucked up data
 
     # detect spikes
     sampling_rate = 1/pl.mean(pl.diff(time_scale))
     beats = detect_beats(ecg_signal, sampling_rate)
 
     # fill unrecognized zones
-    beats = interpolate_unrecognized_beats(beats)
+    beats, holes = interpolate_unrecognized_beats(beats)
 
-    beats = remove
+    # remove 
 
     # calculate heart rate
     heart_rate = 1/pl.mean(pl.diff(beats))
@@ -79,40 +76,26 @@ def interpolate_nans(signal):
         signal[-1] = signal[-2]
 
     for i in range(1,len(signal)-1) :
-        if pl.isnan(signal[i]):
+        if pl.isnan(signal[i]) :
             signal[i] = (signal[i-1] + signal[i+1])/2
 
     return signal
 
 
-def interpolate_unrecognized_beats(beats):
-    """adds """
+def interpolate_unrecognized_beats(beats, max_beat_gaps = 3):
+    """adds beats to a beat train"""
+
     new_beats = []
     dist = pl.diff(beats)
     mm = moving_median(dist)
 
-    for i in range(len(dist)) :
-        if 1.5*mm[i] < dist[i] < 2.5*mm[i]  :
-            # add additional beat
-            index1 = beats[i]
-            index2 = beats[i+1]
-            # insert new beat at half of interfall
-            new_beat = (index1+index2) / 2
-            new_beats.append(new_beat)
-            #print('found single hole at:', new_beat)
-    dist = pl.diff(beats)
-    mm = moving_median(dist)
-    for i in range(len(dist)) :
-        if 2.5*mm[i] < dist[i] < 3.5*mm[i]  :
-            # add additional beat
-            index1 = beats[i]
-            index2 = beats[i+1]
-            # insert new beat at half of interfall
-            new_beat1 = (2*index1+index2) / 3
-            new_beat2 = (index1+2*index2) / 3
-            new_beats.append(new_beat1)
-            new_beats.append(new_beat2)
-            #print('found double hole at:', new_beat1,new_beat2)
+    for gap_size in range(2,max_beat_gaps+1) :
+        for i in range(len(dist)) :
+            if (gap_size-0.5)*mm[i] < dist[i] < (gap_size+0.5)*mm[i] :
+                # add additional beat
+                index1 = beats[i]
+                index2 = beats[i+1]
+                new_beats += [int(n) for n in pl.linspace(index1,index2,gap_size-1)]
 
     beats = pl.concatenate((beats,new_beats),axis=0)
     beats.sort()
@@ -124,14 +107,9 @@ def interpolate_unrecognized_beats(beats):
         if 1.5*mm[i] < dist[i] :
             index1 = beats[i]
             index2 = beats[i+1]
-            holes.append((index1,index2,dist[i]))
+            holes.append((index1,index2,dist[i],mm[i]))
 
-    if holes != [] :
-        print('found more holes at:')
-        for h in holes :
-            print(h)
-
-    return beats
+    return beats, holes
 
 
 def moving_median(signal,size=5):
