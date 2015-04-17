@@ -5,10 +5,10 @@ from pylab import *
 
 physio = da.get_physio_data(320,1)
 
-ecg = array(physio['ecg'])
+ecg  = array(physio['ecg'])
 time = array(physio['time'])
 
-beats, hr, hrv = dpp.process_ecg(ecg,time)
+beats, hr, hrv = dpp.process_ecg(ecg, time)
 
 print('beats',len(beats))
 print('hr',hr)

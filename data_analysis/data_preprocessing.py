@@ -65,6 +65,7 @@ def process_ecg(ecg_signal, time_scale) :
 
 def interpolate_nans(signal):
     """Trys to get rid of nans in array. Just makes an linear interpolation."""
+
     # check for more than one nan in row
     for i in range(len(signal)-1) :
         if pl.isnan(signal[i]) and pl.isnan(signal[i+1]) :
@@ -180,102 +181,25 @@ def low_pass(signal, kernel_type, kernel_size):
     
     return out*factor
 
+# deprecated for now
+"""
+def assign_mean_value_to_boxes(blocks, time_scale, values, func=np.mean) :
 
-def extract_trail_times(df):
+    if len(time_scale) != len(values) :
+        raise Exception('time_scale and values must have same length')
 
-    times = df['Zeitpunkt']
-    status = df['Status']
-    #types = df['BlockType']
-    types = df['Type']
-    trial_id = df['Trial_id']
+    boxes = []
 
-    times = pd.to_datetime(times)
-    times = ( times - datetime.timedelta(hours=1) - datetime.datetime(1970,1,1) ) / pl.timedelta64(1,'s')
+    for block in blocks :
+        start = blocks[0]
+        end = blocks[1]
+        bool_array = (timescale > start) * (timescale < end)
+        boxes.append(boxes[bool_array])
 
-    times = pl.array(times)
-    status = pl.array(status)
-    types = pl.array(types)
-    trial_id = pl.array(trial_id)
+    for i,box in enumerate(boxes) :
+        boxes[i] = func(box)
 
-    starts = (status == 'StartTimeTrial')
-    ends = (status == 'EndTimeTrial')
-
-    # remove BLOCKOVER types
-    blockover = (types != 'BLOCKOVER')
-    starts *= blockover
-    ends *= blockover
-
-    # ...
-    start_ids = trial_id[starts]
-    end_ids = trial_id[ends]
-
-    start_types = types[starts]
-    end_types = types[ends]
-
-    start_times = times[starts]
-    end_times = times[ends]
-
-    #print(start_ids.head)
-    #print(end_ids.head)
-
-    # check for double trail_ids
-    d = pl.sort(start_ids, axis=None)
-    if any(d[d[1:] == d[:-1]]) :
-        raise Exception('double start trail ids')
-    d = pl.sort(end_ids, axis=None)
-    if any(d[d[1:] == d[:-1]]) :
-        raise Exception('double end trail ids')
-
-    blocks = []
-    for si in range(len(start_ids)) :
-        sid = start_ids[si]
-        match = pl.where(sid==end_ids)[0]
-
-        if len(match) == 0 :
-            continue
-
-        ei = match[0]
-
-        if start_types[si] != end_types[ei] :
-            raise Exception('Unequal types for start and endtrail ' + str(sid))
-        elif len(match) > 1 :
-            raise Exception('more than one match')
-
-        start_time = start_times[si]
-        end_time = end_times[ei]
-        trial_type = start_types[si]
-
-        if pl.isnan(start_time) or pl.isnan(end_time) :
-            continue
-
-        blocks.append((start_time,end_time,trial_type))
-
-    if blocks == [] :
-        return [],[],[]
-
-    start_times, end_times, start_types = zip(*blocks)
-
-    start_times = pl.array(start_times)
-    end_times = pl.array(end_times)
-    start_types = pl.array(start_types)
-
-    return start_times, end_times, start_types
-
-
-# joins trails to blocks
-def join_trails_to_blocks(start_times, end_times, start_types):
-
-    # determine change of type
-    change_of_types = [start_types[i]!=start_types[i+1] for i in range(len(start_types)-1)]
-    
-    start_times_index = pl.array([True] + change_of_types)
-    end_times_index = pl.array(change_of_types + [True])
-
-    start_times = start_times[start_times_index]
-    end_times = end_times[end_times_index]
-    start_types = start_types[start_times_index]
-
-    return start_times, end_times, start_types
+    return boxes """
 
 
 def assign_data_to_blocks(start_times, end_times, time_scale, *data) :
@@ -321,12 +245,15 @@ def blocks_to_str(blocks, name, physio_start=None, convert=True):
     return out
 
 
-
 def test_block_times(subject, session):
     print('test blocktimes', subject, session)
     print()
-    gd = da.get_game_data(subject, session)
-    my_blocks= extract_block_times_form_game_data(gd)
+    gd = da.get_game_data3(subject, session)
+    trials = extract_trail_times(gd)
+    start_times = trials[0]
+    end_times = trials[1]
+    conditions = trials[2]
+    my_blocks = da.join_trails_to_blocks(start_times, end_times, conditions)
     print_blocks(my_blocks,'my_blocks')
 
     print()
@@ -340,6 +267,19 @@ def test_block_times(subject, session):
     print_blocks(raw_blocks,'raw_blocks')
 
 
+def test_block_times2(subject, session):
+    print('test blocktimes', subject, session)
+    print()
+    gd = da.get_game_data3(subject, session, silent=True)
+    trials = extract_trail_times(gd)
+    start_times = trials[0]
+    end_times = trials[1]
+    conditions = trials[2]
+    my_blocks = da.join_trails_to_blocks(start_times, end_times, conditions)
+    my_blocks = zip(*my_blocks)
+    print blocks_to_str(my_blocks,'my_blocks')
+
+
 def is_float(num):
     try:
         float(num)
@@ -351,6 +291,12 @@ if __name__ == '__main__':
     print(da.PATH_TO_DB)
     import sys
     args = sys.argv
-    subject = args[1]
-    session = args[2]
-    test_block_times(subject,session)
+    
+    if args[1] == 'all' :
+        for subject in da.subjects :
+            for session in [1,2] :
+                test_block_times2(subject,session)
+    else :
+        subject = args[1]
+        session = args[2]
+        test_block_times(subject,session)

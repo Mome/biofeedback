@@ -180,7 +180,7 @@ def main():
     session = args[2]
     
     print('database:', da.PATH_TO_DB)
-    game_data = da.get_game_data(subject, session)
+    game_data = da.get_game_data3(subject, session)
 
     physio_data = da.get_physio_data(subject, session)
     physio_time = array(physio_data['time'])
