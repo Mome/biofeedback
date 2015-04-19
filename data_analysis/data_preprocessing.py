@@ -9,6 +9,20 @@ from scipy.signal import butter, lfilter, freqz
 import data_access as da
 from rpeakdetect import detect_beats
 
+def process_subject(subject, session) :
+    
+
+
+def process_ecg(ecg_signal, trials) :
+    ecg_signal.remove_nans()
+    ecg_signal.detect_beats()
+    #ecg_signal._detect_compressions()
+    ecg_signal.fill_gaps()
+    ecg_signal.beat_intervalls_by_gaps()
+    ecg_signal.remove_small_intervalls()
+
+    
+
 
 def process_gsr(gsr_signal, time_scale):
 
@@ -37,30 +51,6 @@ def process_gsr(gsr_signal, time_scale):
     #signal = butter_lowpass_filter(gsr_signal, cutoff=5.0, fs=sampling_rate)
 
     return gsr_signal, time_scale
-
-
-def process_ecg(ecg_signal, time_scale) :
-
-    # remove nans
-    ecg_signal = interpolate_nans(ecg_signal)
-
-    # remove fucked up data
-
-    # detect spikes
-    sampling_rate = 1/pl.mean(pl.diff(time_scale))
-    beats = detect_beats(ecg_signal, sampling_rate)
-
-    # fill unrecognized zones
-    beats, holes = interpolate_unrecognized_beats(beats)
-
-    # remove 
-
-    # calculate heart rate
-    heart_rate = 1/pl.mean(pl.diff(beats))
-
-    # calculate HRV
-    hrv = None
-    return beats, heart_rate, hrv
 
 
 def interpolate_nans(signal):

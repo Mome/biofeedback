@@ -66,38 +66,13 @@ def raw_block_times(subject_number, session_number):
     return df  
 
 
-def get_game_data(subject_number, session_number = None, trial_id = None):    
-    con = sqlite3.connect(PATH_TO_DB)
-    sql = "select * from TRIALS_WITH_STATUS where Subject_number = " + str(subject_number)
-    if (session_number is not None ):
-        sql += " and SessionNumber = " + str(session_number)
-    if (trial_id is not None ):
-        sql += " and Trial_id = " + str(trial_id)
-    
-    df = pd.read_sql(sql, con)
-    # ToDo: convert times to seconds
-    return df
-
-
-def get_game_data2(subject_number, session_number = None, trial_id = None):
-    print PATH_TO_DB
-    con = sqlite3.connect(PATH_TO_DB)
-    sql = "select * from TRIALS_WITH_STATUS_NOT_NULL where Subject_number = " + str(subject_number)
-    if (session_number is not None ):
-        sql += " and SessionNumber = " + str(session_number)
-    if (trial_id is not None ):
-        sql += " and Trial_id = " + str(trial_id)
-    
-    df = pd.read_sql(sql, con)
-    # ToDo: convert times to seconds
-    return df
-
-
 def get_game_data3(subject_number, session_number = None, trial_id = None, silent=False):
     if not silent :
         print PATH_TO_DB
         print os.path.exists(PATH_TO_DB)
     con = sqlite3.connect(PATH_TO_DB)
+    # original Lucas : "select * from TRIALS_WITH_STATUS where Subject_number = "
+    # Kriz change : "select * from TRIALS_WITH_STATUS_NOT_NULL where Subject_number = "
     sql = "select * from TRIALS_WITH_STATUS_NOT_NULL_AND_TABLE_SUCCESS where Subject_number = " + str(subject_number)
     if (session_number is not None ):
         sql += " and SessionNumber = " + str(session_number)
@@ -105,7 +80,6 @@ def get_game_data3(subject_number, session_number = None, trial_id = None, silen
         sql += " and Trial_id = " + str(trial_id)
     
     df = pd.read_sql(sql, con)
-    # ToDo: convert times to seconds
     return df
 
 

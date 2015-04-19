@@ -1,12 +1,15 @@
-from pylab import *
+import time
+
+import matplotlib.pyplot as plt
+import matplotlib.collections as collections
 
 import data_preprocessing as dpp
 import data_access as da
 
-import time
 
 def get_filtered_plot(subject, session):
-    game_data = da.get_game_data2(subject, session)
+    
+    physio_data = da.get_physio_data(subject, session)  
 
     physio_data = da.get_physio_data(subject, session)
     physio_time = array(physio_data['time'])
@@ -51,9 +54,48 @@ def get_filtered_plot(subject, session):
     return no_filter_lot, filter_lot, block_time_str
 
 
+def plot_bg_colors(start_times, end_times, conditions, figure, yrange=[0,10]) :
+    
+    ax = figure.add_subplot(111)
+
+    # Plot your own data here
+    ax.plot(time_scale, signal)
+
+    starts, ends, colors = zip(*block_times)
+
+
+    xranges = [(s,(e-s))  for s,e in zip(start_times, end_times)]
+    
+    def color_choice(condition):
+
+        if condition == 'Easy':
+            return 'green'
+        if condition == 'Hard':
+            return 'red'
+        if condition == 'Explain':
+            return 'yellow'
+        if condition == 'PreBaseline':
+            return 'grey'
+        if condition == 'PostBaseline' :
+            return 'grey'
+        if condition == 'Easy-False':
+            return 'blue'
+        if condition == 'Hard-False':
+            return 'purple'
+
+        print('Cannot assign color to condition:', condition)
+        return 'black'
+
+    colors = [color_choice(color_code) for color_code in colors]
+    
+    for i in range(len(xranges)) :
+        coll = collections.BrokenBarHCollection([xranges[i]], yrange, facecolor=colors[i], alpha=0.5)
+        ax.add_collection(coll)
+
+    return figure
+ 
+
 def plot_with_backcolors(block_times, signal, time_scale):
-    import matplotlib.pyplot as plt
-    import matplotlib.collections as collections
 
     # convert to minutes and normalize
     time_scale = time_scale/60
@@ -61,26 +103,16 @@ def plot_with_backcolors(block_times, signal, time_scale):
     time_scale = time_scale - mts
     block_times = [(bt[0]/60-mts, bt[1]/60-mts, bt[2]) for bt in block_times]
 
-
     figure = plt.figure(figsize=(60, 30))
     ax = figure.add_subplot(111)
 
     # Plot your own data here
     ax.plot(time_scale, signal)
 
-    #xad = list(copy(x_axis_divisions))
-    #xad.append(graph_data[0][-1])
-    #xranges = [(xad[i],xad[i+1]-xad[i]) for i in range(len(xad)-1)]
     starts, ends, colors = zip(*block_times)
 
-    #for s,e,c in block_times :
-    #    print(time.asctime(time.gmtime(s)), ' | ', time.asctime(time.gmtime(e)), ' | ', c)
-
-    #print('block start:', [time.asctime(time.gmtime(t)) for t in starts])
-    #print('block ends:', time.asctime(time.gmtime(ends[-1])))
 
     xranges = [(start, (end-start)) for start, end in zip(starts, ends)]
-    #print(xranges, colors)
     yrange = (min(signal), max(signal)-min(signal))
 
     def color_choice(condition):

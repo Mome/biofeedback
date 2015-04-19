@@ -2,18 +2,16 @@
 
 import os
 import sys
-from thread import start_new_thread
 
 from pylab import *
 from PyQt4.QtCore import *
 from PyQt4.QtGui import *
 
-sys.path.append('../../experiment_computer')
+import data_access as da
+import data_preprocessing as dpp
+import fancy_plot
 
-import configurations as conf
-from fancy_physio_plot import process_data
-from data_preparation import get_session_files
-from utils import *
+global_plot_storage = []
 
 
 class MainWindow(QMainWindow):
@@ -50,10 +48,10 @@ class SubjectListWidget(QListWidget):
         self.setMaximumWidth(150)
 
     def add_subjects(self):
-        file_names = os.listdir(conf.data_path)
+        file_names = os.listdir(da.PHYSIO_PATH)
         for name in file_names :
-            print name
-            if os.path.isdir(conf.data_path + os.sep + name) and name.startswith('subject_'):
+            print(name)
+            if os.path.isdir(da.PHYSIO_PATH + os.sep + name) and name.startswith('subject_'):
                 self.addItem(name)
 
     def handle_action(self):
@@ -65,11 +63,11 @@ class SubjectListWidget(QListWidget):
 
         session_dict = get_session_files(subject_id)
 
-        self.tab_widget.clear()
-        print session_dict
+        seblf.tab_widget.clear()
+        print(session_dict)
         for name in session_dict :
             if is_int(name) :
-                tab = PlotSettingsWidget(session_dict[name], session_dict['physio_meta'], session_dict['scores'])
+                tab = PlotSettingsWidget(session_dict[name], session_dict['physio_meta'])
                 self.tab_widget.addTab(tab, 'Session '+str(name))
 
 
@@ -81,7 +79,7 @@ class FileListWidget(QListWidget):
         self.setMaximumWidth(200)
 
     def set_file_items(self, folder_name):
-        file_names = os.listdir(conf.data_path + os.sep + folder_name)
+        file_names = os.listdir(da.PHYSIO_PATH + os.sep + folder_name)
         self.folder_name = str(folder_name)
         self.clear()
         for name in file_names :
@@ -89,16 +87,16 @@ class FileListWidget(QListWidget):
 
     def open_file(self):
         file_name = str(self.currentItem().text())
-        path = conf.data_path + os.sep + self.folder_name + os.sep + file_name
+        path = da.PHYSIO_PATH + os.sep + self.folder_name + os.sep + file_name
         cmd = conf.editor + ' ' + path
         QProcess.startDetached(cmd)
 
 
 class PlotSettingsWidget(QWidget):
 
-    def __init__(self, session_d, meta_file, scores_file):
+    def __init__(self, session_d, meta_file):
         QWidget.__init__(self)
-        print 'inti'
+        print('inti')
 
         self.plots = []
 
@@ -115,29 +113,87 @@ class PlotSettingsWidget(QWidget):
         self.setLayout(main_box)
 
         b_plot.clicked.connect(self.plot_data)
-        show(block=False)
         self.session_d = session_d
+        print('session_d',session_d)
         self.meta_file = meta_file
-        self.scores_file = scores_file
+        print('done in the middle')
 
     def plot_data(self) :
-        physio_record_file = self.session_d['physio_record'][0] #this is assumed to have length one at this point
-        parameters_file = self.session_d['parameters']
-        smallspread_file = self.session_d['smallspread']
-        print 'go'
+        print('go')
         #plot_window = pylab_embedd.Window()
-        plt = process_data(physio_record_file, parameters_file, smallspread_file, self.meta_file, self.scores_file, None)#plot_window.figure)
+        plt = fancy_plot.easy_plot(320,1)
         #plot_window.canvas.draw()
         #plot_window.show()
-        self.plots.append(plt)
-        print 'done'
+        global_plot_storage.append(plt)
+        print(global_plot_storage)
+        print('done')
 
+# constructs a dict that categorizes filenames of a subject folder
+def get_session_files(subject_id):
+
+    folder = da.PHYSIO_PATH + os.sep + 'subject_' + str(subject_id)
+    files = os.listdir(folder)
+
+    session_files = {}
+
+
+    for name in files :
+        parts = name.split('.')[0]
+        parts = parts.split('_')
+
+        # find session
+        if parts[0] == 'physio' and parts[1] == 'record' :
+
+            session = parts[3]
+
+            if session not in session_files :
+                session_files[session] = {'physio_record':[],'parameters':None,'smallspread':None}
+
+            session_files[session]['physio_record'] += [name]
+
+        elif parts[0] == 'Smallspread' :
+
+            session = parts[2]
+
+            if session not in session_files :
+                session_files[session] = {'physio_record':[],'parameters':None,'smallspread':None,'scores':None}
+
+            session_files[session]['smallspread'] = name
+
+        elif parts[0] == 'parameters' :
+
+            session = parts[2]
+
+            if session not in session_files :
+                session_files[session] = {'physio_record':[],'parameters':None,'smallspread':None,'scores':None}
+
+            session_files[session]['parameters'] = name
+
+        elif name == 'SubjectScores.csv' :
+            session_files['scores'] = name
+
+        elif parts[0] == 'physio' and parts[1] == 'meta' :
+            session_files['physio_meta'] = name
+
+        else :
+            if 'other' not in session_files :
+                session_files['other'] = []
+            session_files['other'] += [name]
+
+    return session_files
 
 def main(args):
     app = QApplication(args)
     table = DataTable(data, 5, 3)
     table.show()
     sys.exit(app.exec_())
+
+def is_int(num):
+    try :
+        int(num)
+    except :
+        return False
+    return True
  
 if __name__ == '__main__':
 
