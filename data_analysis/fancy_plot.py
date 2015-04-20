@@ -27,7 +27,7 @@ def plot_results(results, show=True) :
     height = np.ones(len(beats))*np.median(r.raw_ecg)
     plt.scatter(beats, height)
     plt.title('raw data')
-
+    """
     # plot filtered data
     fig2 = plt.figure(2)
     plot_bg_colors(r.trial_starts, r.trial_ends, r.conditions, fig2)
@@ -42,12 +42,12 @@ def plot_results(results, show=True) :
     plt.plot(mean_trial_time, r.mean_hrv_for_trials)
     plt.plot(mean_trial_time, r.mean_gsr_for_trials)
     plt.legend(['hr','hrv','gsr'])
-    plt.title('mean for trials')
+    plt.title('mean for trials')"""
 
     if show :
         plt.show()
     
-    return fig1, fig2, fig3
+    return fig1#, fig2, fig3
 
 
 def get_filtered_plot(subject, session):

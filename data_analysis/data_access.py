@@ -229,7 +229,7 @@ def extract_trial_times(df):
     start_times = times[starts]
     end_times = times[ends]
 
-    print('len(start_times)', len(start_times))
+    #print('len(start_times)', len(start_times))
 
     #print(start_ids.head)
     #print(end_ids.head)

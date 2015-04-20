@@ -57,8 +57,8 @@ def process_ecg(ecg_signal) :
 def process_gsr(gsr_signal) :
     gsr_signal.remove_nans()
     gsr_signal.remove_invalid_values()
-    gsr_signal.filter_median(size=3)
-    gsr_signal.filter_median(size=5)
+    #gsr_signal.filter_median(size=3)
+    #gsr_signal.filter_median(size=5)
 
 """
 def process_gsr(gsr_signal, time_scale):
@@ -88,6 +88,24 @@ def process_gsr(gsr_signal, time_scale):
     #signal = butter_lowpass_filter(gsr_signal, cutoff=5.0, fs=sampling_rate)
 
     return gsr_signal, time_scale"""
+
+def manuel_filter():
+    d = {}
+    d[312,1,'ecg'] = (0, 7000) # everything
+    d[312,2,'ecg'] = (1333, 5000)
+    d[315,1,'ecg'] = (0, 7000) # everything
+    d[315,2,'ecg'] = (0, 7000) # everything
+    d[322,1,'ecg'] = (1893,1974)
+    d[322,1,'ecg'] = (2000.5,3072.3)
+    d[322,1,'ecg'] = (3096.11,3105.4)
+    d[322,1,'ecg'] = (3117,3221.5)
+    d[322,1,'ecg'] = (3230.6,3265.2)
+    d[322,1,'ecg'] = (3271.27,4020)
+    d[322,2,'ecg'] = (2191.25,2229)
+    d[322,2,'ecg'] = (2191.25,2229)
+    d[322,2,'ecg'] = (2338.95,2591.15)
+    d[322,2,'ecg'] = (2657.96,2887)
+    d[323,2,'ecg'] = (699.1,7000)
 
 
 def interpolate_nans(signal):
