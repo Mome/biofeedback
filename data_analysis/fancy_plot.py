@@ -1,10 +1,53 @@
+import copy
 import time
 
 import matplotlib.pyplot as plt
 import matplotlib.collections as collections
+import numpy as np
 
 import data_preprocessing as dpp
 import data_access as da
+
+
+def plot_subject(subject, session) :
+    physio_data, trials = da.get_data(subject, session)
+    results = dpp.process_data(physio_data, trials)
+    plot_results(results)
+
+
+def plot_results(results, show=True) :
+    r = results
+
+    # plot raw data and beats
+    fig1 = plt.figure(1)
+    plot_bg_colors(r.trial_starts, r.trial_ends, r.conditions, fig1)
+    plt.plot(r.time_scale, r.raw_ecg)
+    plt.plot(r.time_scale, r.raw_gsr)
+    beats = r.ecg_signal.beats
+    height = np.ones(len(beats))*np.median(r.raw_ecg)
+    plt.scatter(beats, height)
+    plt.title('raw data')
+
+    # plot filtered data
+    fig2 = plt.figure(2)
+    plot_bg_colors(r.trial_starts, r.trial_ends, r.conditions, fig2)
+    plt.plot(r.gsr_signal.time_scale, r.gsr_signal.signal)
+    plt.title('filtered gsr')
+
+    # plot plot means for trials
+    fig3 = plt.figure(3)
+    plot_bg_colors(r.trial_starts, r.trial_ends, r.conditions, fig3)
+    mean_trial_time = (r.trial_starts+r.trial_ends)/2
+    plt.plot(mean_trial_time, r.mean_hr_for_trials)
+    plt.plot(mean_trial_time, r.mean_hrv_for_trials)
+    plt.plot(mean_trial_time, r.mean_gsr_for_trials)
+    plt.legend(['hr','hrv','gsr'])
+    plt.title('mean for trials')
+
+    if show :
+        plt.show()
+    
+    return fig1, fig2, fig3
 
 
 def get_filtered_plot(subject, session):
@@ -54,45 +97,45 @@ def get_filtered_plot(subject, session):
     return no_filter_lot, filter_lot, block_time_str
 
 
-def plot_bg_colors(start_times, end_times, conditions, figure, yrange=[0,10]) :
+def plot_bg_colors(start_times, end_times, conditions, fig=None, yrange=[0,10]) :
     
-    ax = figure.add_subplot(111)
+    #start_times, end_times, condtitions = \
+    #    da.join_trials_to_blocks(start_times, end_times, conditions)
 
-    # Plot your own data here
-    ax.plot(time_scale, signal)
+    if fig == None :
+        fig = plt.figure()
 
-    starts, ends, colors = zip(*block_times)
-
+    ax = fig.add_subplot(111)
 
     xranges = [(s,(e-s))  for s,e in zip(start_times, end_times)]
     
-    def color_choice(condition):
+    def color_choice(cond):
 
-        if condition == 'Easy':
+        if cond == 'Easy':
             return 'green'
-        if condition == 'Hard':
+        if cond == 'Hard':
             return 'red'
-        if condition == 'Explain':
+        if cond == 'Explain':
             return 'yellow'
-        if condition == 'PreBaseline':
+        if cond == 'PreBaseline':
             return 'grey'
-        if condition == 'PostBaseline' :
+        if cond == 'PostBaseline' :
             return 'grey'
-        if condition == 'Easy-False':
+        if cond == 'Easy-False':
             return 'blue'
-        if condition == 'Hard-False':
+        if cond == 'Hard-False':
             return 'purple'
 
-        print('Cannot assign color to condition:', condition)
+        print('Cannot assign color to condition:', cond)
         return 'black'
 
-    colors = [color_choice(color_code) for color_code in colors]
+    colors = [color_choice(cond) for cond in conditions]
     
     for i in range(len(xranges)) :
         coll = collections.BrokenBarHCollection([xranges[i]], yrange, facecolor=colors[i], alpha=0.5)
         ax.add_collection(coll)
 
-    return figure
+    return fig
  
 
 def plot_with_backcolors(block_times, signal, time_scale):
@@ -139,7 +182,7 @@ def plot_with_backcolors(block_times, signal, time_scale):
 
     for i in range(len(xranges)) :
         coll = collections.BrokenBarHCollection([xranges[i]], yrange, facecolor=colors[i], alpha=0.5)
-        ax.add_collection(coll)
+        ax.ar_collection(coll)
 
     return figure
 
@@ -244,7 +287,6 @@ def main():
 
     # reinject nans for plotting
     gsr_signal[nans] = float('nan')
-
 
     plot_with_backcolors(blocks, gsr_signal, physio_time)
 

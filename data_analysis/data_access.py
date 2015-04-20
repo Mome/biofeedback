@@ -24,11 +24,21 @@ def get_data(subject, session) :
     physio_data = get_physio_data(subject, session)
 
     # using my block times extraction
-    trials = extract_trail_times(game_data)
+    trials = extract_trial_times(game_data)
     if len(trials[0]) == 0 :
-        raise Exception('no trails extracted')
+        raise Exception('no trials extracted')
+
+    # transform to relative time scales
+    min_tr0 = min(trials[0])
+    min_tr1 = min(trials[1])
+    min_phy = min(physio_data['time'])
+    min_time = min(min_tr0, min_tr1, min_phy)
+    physio_data['time'] -= min_time
+    trials[0] -= min_time
+    trials[1] -= min_time
 
     return physio_data, trials
+
 
 def get_block_times(subject_number, session_number):
     if (subject_number is None):
@@ -182,7 +192,7 @@ def only_get_physio_starting_times(subject_num):
         print(i,j,time.asctime( time.gmtime(j) ))
 
 
-def extract_trail_times(df):
+def extract_trial_times(df):
 
     # filter out uncessessful
     df = df[df['Success']==1]
@@ -224,13 +234,13 @@ def extract_trail_times(df):
     #print(start_ids.head)
     #print(end_ids.head)
 
-    # check for double trail_ids
+    # check for double trial_ids
     d = pl.sort(start_ids, axis=None)
     if any(d[d[1:] == d[:-1]]) :
-        raise Exception('double start trail ids')
+        raise Exception('double start trial ids')
     d = pl.sort(end_ids, axis=None)
     if any(d[d[1:] == d[:-1]]) :
-        raise Exception('double end trail ids')
+        raise Exception('double end trial ids')
 
     blocks = []
     for si in range(len(start_ids)) :
@@ -243,7 +253,7 @@ def extract_trail_times(df):
         ei = match[0]
 
         if start_types[si] != end_types[ei] :
-            raise Exception('Unequal types for start and endtrail ' + str(sid))
+            raise Exception('Unequal types for start and endtrial ' + str(sid))
         elif len(match) > 1 :
             raise Exception('more than one match')
 
@@ -267,11 +277,11 @@ def extract_trail_times(df):
     start_types = pl.array(start_types)
     start_ids = pl.array(start_ids)
 
-    return start_times, end_times, start_types, start_ids
+    return [start_times, end_times, start_types, start_ids]
 
 
-# joins trails to blocks
-def join_trails_to_blocks(start_times, end_times, start_types):
+# joins trials to blocks
+def join_trials_to_blocks(start_times, end_times, start_types):
 
     # determine change of type
     change_of_types = [start_types[i]!=start_types[i+1] for i in range(len(start_types)-1)]
@@ -283,7 +293,7 @@ def join_trails_to_blocks(start_times, end_times, start_types):
     end_times = end_times[end_times_index]
     start_types = start_types[start_times_index]
 
-    return start_times, end_times, start_types
+    return [start_times, end_times, start_types]
 
 config = load_configurations()
 

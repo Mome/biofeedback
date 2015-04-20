@@ -1,19 +1,51 @@
+import collections
 import datetime
 import time
 
+import numpy as np
 import pandas as pd
-import pylab as pl
 import scipy.ndimage
 from scipy.signal import butter, lfilter, freqz
+import signal_classes
 
 import data_access as da
 from rpeakdetect import detect_beats
+from utils import is_float, BP
 
-def process_subject(subject, session) :
+def process_data(physio_data, trials) :
     
+    ecg_signal = signal_classes.EcgSignal(physio_data['time'], physio_data['ecg'])
+    gsr_signal = signal_classes.GsrSignal(physio_data['time'], physio_data['gsr'])
+    process_ecg(ecg_signal)
+    process_gsr(gsr_signal)
+
+    trial_starts = trials[0]
+    trial_ends = trials[1]
+    conditions = trials[2]
+    trial_ids = trials[3]
+
+    mean_hr_for_trials = ecg_signal.mean_value_for_trials(trial_starts, trial_ends, 'hr')
+    mean_hrv_for_trials = ecg_signal.mean_value_for_trials(trial_starts, trial_ends,'hrv')
+    mean_gsr_for_trials = gsr_signal.mean_gsr_for_trials(trial_starts, trial_ends)
+
+    dd = {}
+    dd['time_scale'] = np.array(physio_data['time'])
+    dd['raw_ecg'] = np.array(physio_data['ecg'])
+    dd['raw_gsr'] = np.array(physio_data['gsr'])
+    dd['trial_starts'] = trial_starts
+    dd['trial_ends'] = trial_ends
+    dd['conditions'] = conditions
+    dd['trial_ids'] = trial_ids
+    dd['ecg_signal'] = ecg_signal
+    dd['gsr_signal'] = gsr_signal
+    dd['mean_hr_for_trials'] = mean_hr_for_trials
+    dd['mean_hrv_for_trials'] = mean_hrv_for_trials
+    dd['mean_gsr_for_trials'] = mean_gsr_for_trials
+
+    return collections.namedtuple('Results', dd.keys())(*dd.values())
 
 
-def process_ecg(ecg_signal, trials) :
+def process_ecg(ecg_signal) :
     ecg_signal.remove_nans()
     ecg_signal.detect_beats()
     #ecg_signal._detect_compressions()
@@ -21,9 +53,14 @@ def process_ecg(ecg_signal, trials) :
     ecg_signal.beat_intervalls_by_gaps()
     ecg_signal.remove_small_intervalls()
 
-    
 
+def process_gsr(gsr_signal) :
+    gsr_signal.remove_nans()
+    gsr_signal.remove_invalid_values()
+    gsr_signal.filter_median(size=3)
+    gsr_signal.filter_median(size=5)
 
+"""
 def process_gsr(gsr_signal, time_scale):
 
     assert type(gsr_signal) == type(time_scale) == type(pl.array([]))
@@ -50,7 +87,7 @@ def process_gsr(gsr_signal, time_scale):
     #sampling_rate = 1/pl.mean(pl.diff(time_scale))
     #signal = butter_lowpass_filter(gsr_signal, cutoff=5.0, fs=sampling_rate)
 
-    return gsr_signal, time_scale
+    return gsr_signal, time_scale"""
 
 
 def interpolate_nans(signal):
@@ -269,13 +306,6 @@ def test_block_times2(subject, session):
     my_blocks = zip(*my_blocks)
     print blocks_to_str(my_blocks,'my_blocks')
 
-
-def is_float(num):
-    try:
-        float(num)
-    except :
-        return False
-    return True
 
 if __name__ == '__main__':
     print(da.PATH_TO_DB)

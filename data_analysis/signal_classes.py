@@ -4,8 +4,6 @@ import numpy as np
 
 import rpeakdetect
 
-from data_preprocessing import moving_median
-
 
 class Signal(object) :
 
@@ -14,7 +12,6 @@ class Signal(object) :
         # copy imput arrays
         self.time_scale = np.array(time_scale)
         self.signal = np.array(signal)
-
         self.sampling_rate = 1 / np.median(np.diff(time_scale))
 
     def remove_invalid_values(self, lower_bound=float('-inf'), upper_bound=float('inf')) :
@@ -146,7 +143,7 @@ class EcgSignal(Signal):
         tmp = [bi for bi in self.beat_intervalls if len(bi)>min_size]
         self.beat_intervalls = tmp
 
-    def mean_value_for_blocks(self, blocks, measure, silent=True) :
+    def mean_value_for_trials(self, trail_starts, trial_ends, measure, silent=True) :
 
         if measure.lower() == 'hr' :
             measure = EcgSignal.heart_rate_for_intervall
@@ -155,10 +152,8 @@ class EcgSignal(Signal):
 
         heart_rates = []
 
-        for block in blocks :
+        for start, end in zip(trail_starts, trial_ends) :
             # look for beginning intervall
-            start = block[0]
-            end = block[1]
             containing_intervalls = [ bi[(bi>=start)*(bi<=end)] for bi in self.beat_intervalls ]
             containing_intervalls = [ ci for ci in containing_intervalls if len(ci)>2 ]
             #return containing_intervalls
@@ -169,6 +164,8 @@ class EcgSignal(Signal):
                 if not silent : print 'No mean rates could be calculated!'
                 heart_rates.append(-1)
                 continue
+
+            print mean_rates, intervall_lens
 
             combined_hr = sum([l*hr for l,hr in zip(mean_rates,intervall_lens)]) / sum(intervall_lens)
 
@@ -237,13 +234,13 @@ class GsrSignal(Signal) :
     def remove_invalid_values(self):
         super(GsrSignal,self).remove_invalid_values(lower_bound=-1)
 
-    def mean_gsr_for_blocks(self, blocks) :
+    def mean_gsr_for_trials(self, trial_starts, trial_ends) :
 
         mean_gsr = []
 
-        for block in blocks :
-            start = block[0]
-            end = block[1]
+        for trial in zip(trial_starts, trial_ends) :
+            start = trial[0]
+            end = trial[1]
             ts = self.time_scale
             intervall = self.signal[(ts>=start)*(ts<=end)]
             if len(intervall) > 0 :
@@ -253,3 +250,18 @@ class GsrSignal(Signal) :
 
         return mean_gsr
     
+def moving_median(signal,size=5):
+
+    out = np.zeros(len(signal))
+    for i in range(len(signal)) :
+        if i < size :
+            l = 0
+        else :
+            l = i-size
+        if i+size >= len(signal) :
+            r = len(signal)-1
+        else :
+            r  = i+size
+        med = np.median(signal[l:r])
+        out[i] = med
+    return out
