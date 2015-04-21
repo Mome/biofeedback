@@ -12,10 +12,11 @@ import data_access as da
 from rpeakdetect import detect_beats
 from utils import is_float, BP
 
-def process_data(physio_data, trials) :
+def process_data(physio_data, trials, subject, session) :
     
     ecg_signal = signal_classes.EcgSignal(physio_data['time'], physio_data['ecg'])
     gsr_signal = signal_classes.GsrSignal(physio_data['time'], physio_data['gsr'])
+    manuel_cutout(ecg_signal, subject, session)
     process_ecg(ecg_signal)
     process_gsr(gsr_signal)
 
@@ -58,7 +59,7 @@ def process_gsr(gsr_signal) :
     gsr_signal.remove_nans()
     gsr_signal.remove_invalid_values()
     #gsr_signal.filter_median(size=3)
-    #gsr_signal.filter_median(size=5)
+    gsr_signal.filter_median(size=5)
 
 """
 def process_gsr(gsr_signal, time_scale):
@@ -89,24 +90,23 @@ def process_gsr(gsr_signal, time_scale):
 
     return gsr_signal, time_scale"""
 
-def manuel_filter():
-    d = {}
-    d[312,1,'ecg'] = (0, 7000) # everything
-    d[312,2,'ecg'] = (1333, 5000)
-    d[315,1,'ecg'] = (0, 7000) # everything
-    d[315,2,'ecg'] = (0, 7000) # everything
-    d[322,1,'ecg'] = (1893,1974)
-    d[322,1,'ecg'] = (2000.5,3072.3)
-    d[322,1,'ecg'] = (3096.11,3105.4)
-    d[322,1,'ecg'] = (3117,3221.5)
-    d[322,1,'ecg'] = (3230.6,3265.2)
-    d[322,1,'ecg'] = (3271.27,4020)
-    d[322,2,'ecg'] = (2191.25,2229)
-    d[322,2,'ecg'] = (2191.25,2229)
-    d[322,2,'ecg'] = (2338.95,2591.15)
-    d[322,2,'ecg'] = (2657.96,2887)
-    d[323,2,'ecg'] = (699.1,7000)
+def manuel_cutout(ecg_signal, subject, session):
 
+    key = (int(subject),int(session))
+
+    d = {}
+    d[312,1] = [(0, 7000)] # everything
+    d[312,2] = [(1333, 5000)]
+    d[315,1] = [(0, 7000)] # everything
+    d[315,2] = [(0, 7000)] # everything
+    d[322,1] = [(1893,1974), (2000.5,3072.3), (3096.11,3105.4), (3117,3221.5), (3230.6,3265.2), (3271.27,4020)]
+    d[322,2] = [(2191.25,2229), (2338.95,2591.15), (2657.96,2887)]
+    d[323,2] = [(699.1,7000)]
+
+    if key in d :
+        for s,e in d[key] :
+            bool_i = (ecg_signal.time_scale>s)*(ecg_signal.time_scale<e)
+            ecg_signal.signal[bool_i] = float('nan')
 
 def interpolate_nans(signal):
     """Trys to get rid of nans in array. Just makes an linear interpolation."""

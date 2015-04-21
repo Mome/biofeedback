@@ -19,6 +19,9 @@ def detect_beats(
     with some tweaks (mainly robust estimation of the rectified signal
     cutoff threshold).
     """
+    if len(ecg) < 6 :
+        print 'ecg considered as empty: len', len(ecg)
+        return np.array([])
 
     ransac_window_size = int(ransac_window_size*rate)
 

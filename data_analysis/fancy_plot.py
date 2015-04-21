@@ -11,7 +11,7 @@ import data_access as da
 
 def plot_subject(subject, session) :
     physio_data, trials = da.get_data(subject, session)
-    results = dpp.process_data(physio_data, trials)
+    results = dpp.process_data(physio_data, trials, subject, session)
     plot_results(results)
 
 
@@ -27,11 +27,12 @@ def plot_results(results, show=True) :
     height = np.ones(len(beats))*np.median(r.raw_ecg)
     plt.scatter(beats, height)
     plt.title('raw data')
-    """
+    
     # plot filtered data
     fig2 = plt.figure(2)
     plot_bg_colors(r.trial_starts, r.trial_ends, r.conditions, fig2)
     plt.plot(r.gsr_signal.time_scale, r.gsr_signal.signal)
+    plt.plot(r.ecg_signal.time_scale, r.ecg_signal.signal)
     plt.title('filtered gsr')
 
     # plot plot means for trials
@@ -42,7 +43,7 @@ def plot_results(results, show=True) :
     plt.plot(mean_trial_time, r.mean_hrv_for_trials)
     plt.plot(mean_trial_time, r.mean_gsr_for_trials)
     plt.legend(['hr','hrv','gsr'])
-    plt.title('mean for trials')"""
+    plt.title('mean for trials')
 
     if show :
         plt.show()

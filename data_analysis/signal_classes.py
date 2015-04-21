@@ -69,7 +69,10 @@ class EcgSignal(Signal):
 
     def detect_beats(self):
         self.beat_indices = rpeakdetect.detect_beats(self.signal, self.sampling_rate)
-        self.beats = self.time_scale[self.beat_indices]
+        if len(self.beat_indices) > 0 :
+            self.beats = self.time_scale[self.beat_indices]
+        else :
+            self.beats = np.array([]) 
 
     def remove_invalid_values(self):
         # 5.0 or 4.5 or lower
@@ -179,7 +182,7 @@ class EcgSignal(Signal):
         if any(np.isnan(beats)) :
             print 'beats, Naaaaaans!'
 
-        hr = 1.0 / np.diff(beats)
+        hr = 1.0 / np.abs(np.diff(beats))
 
         if any(np.isnan(hr)) :
             print 'hr, Naaaaaans!'
