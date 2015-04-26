@@ -1,5 +1,7 @@
 from __future__ import division
 
+from scipy.signal import periodogram
+from scipy.interpolate import interp1d
 import numpy as np
 
 import rpeakdetect
@@ -209,6 +211,28 @@ class EcgSignal(Signal):
         HR = len(beats)/time_range
 
         return HR
+
+    @staticmethod
+    def lf_hf_ratio_for_intervalls(beats):
+        RR = np.diff(beats)
+        freq = 1.0/np.mean(RR)
+        times = [(l+r)/2.0 for l,r in zip(beats[:-1],beats[1:])]
+        times = np.array(times)
+        RR_f = interp1d(times, RR, kind='cubic')
+        RR = RR_f(np.linspace(min(times),max(times),len(times)))
+        f, Pxx = periodogram(RR,freq)
+
+        plot(f,Pxx)
+        
+        show()
+        raw_input()
+
+
+        # VLF = 0, 0.04 Hz
+        # LF = 0.04, 0.15 Hz
+        # HF = 0.15, 0.5 Hz 
+        
+        
 
     """ probabliy not really needed any more """
     def remove_holes(self, smoothing_factor=0.75):
