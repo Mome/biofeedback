@@ -1,3 +1,11 @@
+"""Command line interface to record e-Health data.
+
+-i, --input : arduino, raspi, dummy
+
+"""
+
+
+
 import argparse
 import os
 import time

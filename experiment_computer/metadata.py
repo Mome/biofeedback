@@ -14,8 +14,8 @@ class Subject:
         self.file_path = path + os.sep + conf.metadata_file_prefix + '_' + str(subject_id) + '.yml'
 
         if os.path.exists(self.file_path) :
-            with open(self.file_path) as f:
-                d = yaml.load(open(self.file_path,'r'))
+            with open(self.file_path, 'r') as f:
+                d = yaml.load(f)
             self.subject_id = d['subject_id']
             self.comment = d['comment']
             self.records = d['records']
