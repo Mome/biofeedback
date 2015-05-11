@@ -141,5 +141,5 @@ if __name__=='__main__':
             remove_singleton()
     else :
         print 'Programm already running.'
-        print 'Close other instances !! If you are sure no other instance is running remove the file "physio_singleton_lock" from your home directory.'
-        raw_input('Press ENTER to continue.')
+        print 'Close all other instances !! If you are sure no other instance is running remove the file "physio_singleton_lock" from your home directory.'
+        #raw_input('Press ENTER to continue.')

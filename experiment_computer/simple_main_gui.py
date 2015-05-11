@@ -19,7 +19,7 @@ from PyQt4.QtGui import *
 import configurations as conf
 import metadata
 import stream_manager
-from utils import is_int
+from utils import *
 
 
 class MainWindow(QMainWindow):
@@ -36,15 +36,15 @@ class MainWindow(QMainWindow):
         self.lanes = tuple(lanes)
 
         self.resize(200, 150)
-        self.setWindowTitle('Recorder')
+        self.setWindowTitle('PhysioRecorder')
         self.setWindowIcon(QIcon('icon/ecg-icon.png'))
 
         upper_box = QHBoxLayout()
         if not noecg:
-            ecg_plot = PlotButton('plot ECG', 'ecg', manager)
+            ecg_plot = PlotButton('plot ECG', 'ecg', main_window=self)
             upper_box.addWidget(ecg_plot)
         if not nogsr:
-            gsr_plot = PlotButton('plot GSR', 'gsr', manager)
+            gsr_plot = PlotButton('plot GSR', 'gsr', main_window=self)
             upper_box.addWidget(gsr_plot)
 
         middle_box = QHBoxLayout()
@@ -188,7 +188,7 @@ class RecordButton(QPushButton):
 class PlotButton(QPushButton):
     """Button to toggle the life-plotting of an input stream."""
 
-    def __init__(self, name, type_, manager):
+    def __init__(self, name, type_, main_window):
         QPushButton.__init__(self, name)
         self.toggled.connect(self.handle_action)
         self.setCheckable(True)
@@ -197,18 +197,18 @@ class PlotButton(QPushButton):
         elif type_ == 'gsr':
             self.plot_mask = [1]
 
-        self.manager = manager
+        self.main_window = main_window
 
     def handle_action(self):
         if self.isChecked():
             self.setStyleSheet("background-color: green")
-            self.graph = stream_manager.GraphicalWriter(self.plot_mask, app=app)
-            self.manager.addWriter(self.graph)
+            self.graph = stream_manager.GraphicalWriter(self.plot_mask, app=self.main_window.app)
+            self.main_window.manager.addWriter(self.graph)
             self.graph.start()
 
         else:
             self.setStyleSheet("background-color: none")
-            self.manager.removeWriter(self.graph)
+            self.main_window.manager.removeWriter(self.graph)
 
 
 class TerminalButton(QPushButton):
@@ -281,8 +281,7 @@ class RecordDialog(QDialog):
         self.accept()
 
 
-if __name__ == '__main__':
-
+def start_gui():
     noecg = False
     nogsr = False
 
@@ -311,3 +310,20 @@ if __name__ == '__main__':
     ex = app.exec_()
     manager.stop()
     sys.exit(ex)
+
+
+def main():
+    if not singleton_exists() :
+        try :
+            create_singelton()
+            start_gui()
+        finally :
+            remove_singleton()
+    else :
+        print 'Programm already running.'
+        print 'Close all other instances !! If you are sure no other instance is running remove the file "physio_singleton_lock" from your home directory.'
+        raw_input('Press ENTER to continue.')
+
+
+if __name__ == '__main__':
+    main()
