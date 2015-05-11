@@ -142,7 +142,7 @@ class RecordButton(QPushButton):
             file_path = stream_manager.FileWriter.construct_filepath(rd.subject_id, rd.session)
 
             subject = metadata.Subject(rd.subject_id)
-            record_number = subject.get_next_record_number()
+            record_number = subject.get_next_record_number(rd.session)
             session = rd.session
             filename = file_path.split(os.sep)[-1]
             start_time = time.time()

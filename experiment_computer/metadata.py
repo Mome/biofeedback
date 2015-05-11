@@ -45,11 +45,16 @@ class Subject:
         self.records.append(d)
         self.save()
 
-    def get_next_record_number(self):
-        if self.records == [] :
+    def get_next_record_number(self, session):
+
+        valid_numbers = [r['number'] for r in self.records if r['session']==session]
+        print valid_numbers
+
+        if len(valid_numbers) == 0:
             next_number = 0
-        else:
-            next_number=max([r['number'] for r in self.records])+1
+        else :
+            next_number = max(valid_numbers)+1
+
         return next_number
 
     def save(self):
