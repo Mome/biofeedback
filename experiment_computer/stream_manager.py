@@ -43,7 +43,8 @@ class UdpStreamReader:
         return data
 
 
-class SerialStreamReader():
+class SerialStreamReader:
+    """Reads data from USB-port."""
 
     def __init__(self, port, baud=115200):
         self.port = port
@@ -56,7 +57,7 @@ class SerialStreamReader():
         
         try :
             return self.ser.readline().strip()
-        except SerialException :
+        except SerialException:
             print 'Serial disconnected'
             self.connected = False
             self.reconnect()
@@ -64,13 +65,12 @@ class SerialStreamReader():
     
     def reconnect(self):
     
-        if self.port != 'auto' :
+        if self.port != 'auto':
             try :
                 self.ser = Serial(self.port, self.baud)
                 self.connected = True
                 return
             except SerialException:
-                #print 'Cannot connect to old port !'
                 self.connected = False
         
         while not self.connected :
@@ -88,23 +88,22 @@ class SerialStreamReader():
         print 'Connected to', self.port
     
     def autochoose_port(self):
-
-        """ Automatically chooses the comport where the device information is
-            identically to a string saved in the configurations file.
-            Trimmed to last information from pyserial's list_comports method"""
+        """Automatically chooses the comport where the device information is
+           identically to a string saved in the configurations file.
+           Trimmed to last information from pyserial's list_comports method"""
         
-        if sys.platform.startswith('linux') :
+        if sys.platform.startswith('linux'):
             target_port_id = conf.linux_port_id_2
-        elif sys.platform.startswith('win') :
+        elif sys.platform.startswith('win'):
             target_port_id = conf.win_port_id_2
         else :
             print 'Port autochoose not supported for', os.platform
         
         target_port = None
         
-        for port, port_id_1, port_id_2  in list_comports() :
+        for port, port_id_1, port_id_2  in list_comports():
             
-            if port_id_2 == target_port_id :
+            if port_id_2 == target_port_id:
                 target_port = port
                 break
         
@@ -112,11 +111,12 @@ class SerialStreamReader():
 
 
 class DummyStreamReader:
+    """Stream dummy for testing."""
     
     def __init__(self, mean_sleep=0.1, std_sleep=0.001, funcs=['ecg','sin']):
         self.port = 'DummyPort'
 
-        for i,func in enumerate(funcs) :
+        for i,func in enumerate(funcs):
             if func == 'ecg':
                 mean_sleep = 0.0078125 #128Hz
                 # reads lines from ecg file, puts it in an iterator and converts it to a function
@@ -127,7 +127,7 @@ class DummyStreamReader:
                     funcs[i] = lambda _ : ecg_iter.next()
             elif func == 'sin':
                 funcs[i] = math.sin
-            elif func == 'cos' :
+            elif func == 'cos':
                 funcs[i] = math.cos
             else :
                 funcs[i] = lambda _ : 1
@@ -147,8 +147,9 @@ class DummyStreamReader:
 
 
 class FileWriter:
+    """Writes data to a file."""
 
-    def __init__(self, file_path, timed=True):
+    def __init__(self, file_path, timed='absolute', columns=None, lanes=None):
         
         # dont know if I still need that #
         if os.path.exists(file_path) :
@@ -158,6 +159,12 @@ class FileWriter:
         self.file_path = file_path
         self.timed=timed
         self.set_starting_time()
+        self.lanes = lanes
+        self.columns = columns
+
+        self.file.write(conf.data_delimiter.join(columns) + '\n')
+
+
 
     def set_starting_time(self,starting_time=None) :
         if starting_time == None :
@@ -166,11 +173,20 @@ class FileWriter:
             self.starting_time = starting_time
 
     def write(self,data):
-        if self.timed :
+
+        data = data.split(conf.data_delimiter)
+
+        if self.lanes != None :
+            data = [data[i] for i in self.lanes]
+
+        if self.timed == 'absolute':
+            data = [time.time().__repr__()] + data
+        elif self.timed == 'relative':
             time_elapse = str(int(round((time.time()-self.starting_time) * 1000)))
-            self.file.write(time_elapse + conf.data_delimiter + data + '\n')
-        else :
-            self.file.write(data + '\n')
+            data = [time_elapse] + data
+
+        data = conf.data_delimiter.join(data)
+        self.file.write(data + '\n')
 
     def close(self):
         self.file.close()
@@ -249,12 +265,14 @@ class RamWriter:
 
 
 class TermWriter:
+    """Write data to stdout."""
 
     def write(self, data):
         print data
 
 
 class GraphicalWriter:
+    """Animated plot using pyqtgraph."""
     
     def __init__(self, lanes, data_buffer_size=700, plot_type=1, app=None):
         self.lanes = lanes
@@ -318,6 +336,7 @@ class GraphicalWriter:
 
 # fix this to be usable with lane parameter
 class AudioWriter:
+    """Plays a beep sound, if data recording leaves valid range."""
  
     def __init__(self):
         self.ecg_upper_limit = 5.0
@@ -366,27 +385,29 @@ class AudioWriter:
         
         if len(self.sound_list) != 0 :
             self.play_sound()
-        
-        
+
     def play_sound(self):
         threading.Thread(target=self._run).start()
-    
+
     def _run(self):
-	for kind in self.sound_list :
-            if kind == 'data_error' :
+        for kind in self.sound_list:
+            if kind == 'data_error':
                 winsound.Beep(self.data_error_freq, self.duration)
                 print 'Input data format error !'
-            elif kind == 'ecg' :
+            elif kind == 'ecg':
                 winsound.Beep(self.ecg_freq, self.duration)
                 print 'ecg problem'
-            elif kind == 'gsr' :
+            elif kind == 'gsr':
                 winsound.Beep(self.gsr_freq, self.duration)
                 print 'gsr problem'
+            else :
+                raise ValueExeption('unknown kind', type(kind), str(kind))
         time.sleep(self.wait_time)
         self.sound_list = []
 
 
 class StreamManager:
+    """Manages the distribution of streams."""
 
     def __init__(self, stream_reader):
         self.stream_reader = stream_reader
@@ -397,17 +418,17 @@ class StreamManager:
     def addWriter(self, writer):
         if not self.is_running :
             self.writers.append(writer)
-        else :
+        else:
             self.jobs.append(('add',writer))
 
     def removeWriter(self, writer):
-        if not self.is_running :
+        if not self.is_running:
             self.writers.remove(writer)
-        else :
+        else:
             self.jobs.append(('rem',writer))
 
     def start(self):
-        if self.is_running :
+        if self.is_running:
             raise Exception('StreamManager already running!')
         self.is_running = True
         threading.Thread(target=self._run).start()
@@ -416,19 +437,19 @@ class StreamManager:
     def _run(self) :
         while self.is_running :
             data = self.stream_reader.read()
-            for w in self.writers :
+            for w in self.writers:
                 w.write(data)
 
-            if self.jobs == [] :
+            if self.jobs == []:
                 continue
 
             jobs = self.jobs
             self.jobs = []
 
             for job in jobs :
-                if job[0] == 'add' :
+                if job[0] == 'add':
                     self.writers.append(job[1])
-                elif job[0] == 'rem' :
+                elif job[0] == 'rem':
                     self.writers.remove(job[1])
                 else :
                     print 'No such job:', job[0]
@@ -465,7 +486,7 @@ class StreamBuffer:
 
 
 class UdpStreamer :
-    """ Calls a programm and streams stdout to some port via udp"""
+    """Call a programm and streams stdout to some port via udp."""
     
     def __init__(self, app_path, destination):
         if destination == 'adhock':

@@ -17,28 +17,19 @@ class Subject:
             with open(self.file_path, 'r') as f:
                 d = yaml.load(f)
             self.subject_id = d['subject_id']
-            self.comment = d['comment']
             self.records = d['records']
         else :
             self.subject_id = subject_id
-            self.comment = ''
             self.records = []
             self.save()
 
     def get_dict(self):
         d = {}
         d['subject_id'] = self.subject_id
-        d['comment'] = self.comment
         d['records'] = self.records
         return d
 
-    def get_comment(self):
-        return self.comment
-
-    def set_comment(self,comment):
-        self.comment = comment
-
-    def add_record(self, number, file_name, session, start_time, source, sample_rate, column_labels, marker, comment):
+    def add_record(self, number, file_name, session, start_time, source, sample_rate, column_labels):
         d = {}
 
         d['number'] = number
@@ -46,8 +37,6 @@ class Subject:
         d['session'] = session
         d['start_time'] = start_time
         d['sample_rate'] = sample_rate
-        d['comment'] = comment
-        d['marker'] = marker
         d['source'] = source
 
         for i, label in enumerate(column_labels):

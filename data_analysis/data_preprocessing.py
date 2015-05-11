@@ -28,6 +28,16 @@ def process_data(physio_data, trials, subject, session) :
     mean_hr_for_trials = ecg_signal.mean_value_for_trials(trial_starts, trial_ends, 'hr')
     mean_hrv_for_trials = ecg_signal.mean_value_for_trials(trial_starts, trial_ends,'hrv')
     mean_gsr_for_trials = gsr_signal.mean_gsr_for_trials(trial_starts, trial_ends)
+    
+    blocks = da.join_trials_to_blocks(trial_starts, trial_ends, conditions)
+    block_starts = blocks[0]
+    block_ends = blocks[1]
+    block_conditions = blocks[2]
+
+    mean_hr_for_blocks = ecg_signal.mean_value_for_trials(block_starts, block_ends, 'hr')
+    mean_hrv_for_blocks = ecg_signal.mean_value_for_trials(block_starts, block_ends,'hrv')
+    mean_lf_hf_ratio_for_blocks = ecg_signal.mean_value_for_trials(block_starts, block_ends, 'lf_hf_ratio')
+    mean_gsr_for_blocks = gsr_signal.mean_gsr_for_trials(block_starts, block_ends)
 
     dd = {}
     dd['time_scale'] = np.array(physio_data['time'])

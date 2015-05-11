@@ -14,8 +14,7 @@ import os
 import sys
 import time
 
-from PyQt4.QtGui import QMainWindow, QIcon, QHBoxLayout, QVBoxLayout, QWidget,
-QMessageBox, QPushButton, QDialog, QLabel, QLineEdit, QApplication
+from PyQt4.QtGui import *
 
 import configurations as conf
 import metadata
@@ -26,18 +25,27 @@ from utils import is_int
 class MainWindow(QMainWindow):
     """Contains all the Buttons."""
 
-    def __init__(self, manager, app):
+    def __init__(self, manager, app, noecg, nogsr):
         QMainWindow.__init__(self)
+
+        lanes = []
+        if not noecg :
+            lanes.append(0)
+        if not nogsr :
+            lanes.append(1)
+        self.lanes = tuple(lanes)
 
         self.resize(200, 150)
         self.setWindowTitle('Recorder')
         self.setWindowIcon(QIcon('icon/ecg-icon.png'))
 
         upper_box = QHBoxLayout()
-        ecg_plot = PlotButton('plot ECG', 'ecg', manager)
-        gsr_plot = PlotButton('plot GSR', 'gsr', manager)
-        upper_box.addWidget(ecg_plot)
-        upper_box.addWidget(gsr_plot)
+        if not noecg:
+            ecg_plot = PlotButton('plot ECG', 'ecg', manager)
+            upper_box.addWidget(ecg_plot)
+        if not nogsr:
+            gsr_plot = PlotButton('plot GSR', 'gsr', manager)
+            upper_box.addWidget(gsr_plot)
 
         middle_box = QHBoxLayout()
         terminal_button = TerminalButton(manager)
@@ -58,6 +66,8 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(main_widget)
         self.manager = manager
         self.app = app
+        self.noecg = noecg
+        self.nogsr = nogsr
         self.recording = False
 
     def canExit(self):
@@ -138,14 +148,23 @@ class RecordButton(QPushButton):
             start_time = time.time()
             source = 'arduino'
             sample_rate = conf.default_sample_rate
-            column_labels = conf.default_coloumn_labels
-            marker = False
-            comment = ''
+
+            column_labels = ['absolute_time']
+            if not noecg :
+                column_labels.append('ecg')
+            if not nogsr :
+                column_labels.append('gsr')
+
             subject.add_record(record_number, filename, session,
                                start_time, source, sample_rate,
-                               column_labels, marker, comment)
+                               column_labels)
 
-            self.writer = stream_manager.FileWriter(file_path)
+            self.writer = stream_manager.FileWriter(
+                file_path = file_path,
+                timed = 'absolute',
+                columns = column_labels,
+                lanes = self.main_window.lanes,
+                )
             self.manager.addWriter(self.writer)
         else:
             self.setStyleSheet("background-color: none")
@@ -264,13 +283,16 @@ class RecordDialog(QDialog):
 
 if __name__ == '__main__':
 
+    noecg = False
+    nogsr = False
+
     for arg in sys.argv[1:]:
         if arg == 'dummy':
             reader = stream_manager.DummyStreamReader()
         elif arg == 'noecg':
-            pass
+            noecg = True
         elif arg == 'nogsr':
-            pass
+            nogsr = False
         else:
             print 'unknown commandline parameter', sys.arv[1]
             sys.exit()
@@ -284,7 +306,7 @@ if __name__ == '__main__':
     manager.start()
 
     app = QApplication(sys.argv)
-    main = MainWindow(manager, app)
+    main = MainWindow(manager, app, noecg, nogsr)
     main.show()
     ex = app.exec_()
     manager.stop()

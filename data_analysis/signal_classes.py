@@ -3,6 +3,7 @@ from __future__ import division
 from scipy.signal import periodogram
 from scipy.interpolate import interp1d
 import numpy as np
+import matplotlib.pyplot as plt
 
 import rpeakdetect
 
@@ -154,6 +155,9 @@ class EcgSignal(Signal):
             measure = EcgSignal.heart_rate_for_intervall
         elif measure.lower() == 'hrv' :
             measure = EcgSignal.hrv_rate_for_intervall
+        elif measure.lower() == 'lf_hf_ratio' :
+            measure = EcgSignal.lf_hf_ratio_for_intervalls
+
 
         heart_rates = []
 
@@ -221,17 +225,38 @@ class EcgSignal(Signal):
         RR_f = interp1d(times, RR, kind='cubic')
         RR = RR_f(np.linspace(min(times),max(times),len(times)))
         f, Pxx = periodogram(RR,freq)
-
-        plot(f,Pxx)
         
-        show()
-        raw_input()
+        plt.figure(1)
+        plt.plot(times,RR)
+        plt.figure(2)
+        plt.plot(f,Pxx)
+        plt.show()
+
+        # all in Hz
+        #VLF = f < 0.04
+        lf_index = (f > 0.04)*(f<0.15)
+        hf_index = (f > 0.15)*(f<0.5)
+
+        LF  = sum(Pxx[lf_index])
+        HF = sum(Pxx[hf_index])
+
+        print(LF,HF,LF/HF)
+        raw_input('press enter')
+
+        return LF/HF
 
 
-        # VLF = 0, 0.04 Hz
-        # LF = 0.04, 0.15 Hz
-        # HF = 0.15, 0.5 Hz 
-        
+    def interpolate_RR(self):
+        out = []
+        for beats in self.beat_intervalls :
+            RR = np.diff(beats)
+            freq = 1.0/np.mean(RR) # in Hz
+            times = [(l+r)/2.0 for l,r in zip(beats[:-1],beats[1:])]
+            times = np.array(times)
+            RR_f = interp1d(times, RR, kind='cubic')
+            RR = RR_f(np.linspace(min(beats),max(beats),len(beats)))
+            out.append(RR)
+        self.RR = out
         
 
     """ probabliy not really needed any more """
