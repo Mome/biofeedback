@@ -9,46 +9,102 @@ import data_preprocessing as dpp
 import data_access as da
 
 
-def plot_subject(subject, session) :
+def plot_subject(subject, session, options) :
+    """Load, Process and plot data for one subject/session pair.
+
+       Possible options: ('ecg','gsr','blocks','trials','plot_beats')
+    """
+
+    #option_keys =('do_ecg','do_gsr','do_blocks','do_trials','show')
+    #options.update(dict.fromkeys(option_keys, False)) # fill missing keys with False
+    #options = namedtuple('Options', options.keys())(**options)
+
+    options = [opt.lower() for opt in options]
+
     physio_data, trials = da.get_data(subject, session)
-    results = dpp.process_data(physio_data, trials, subject, session)
-    plot_results(results)
+    results = dpp.process_data(physio_data, trials, subject, session, options)
+    plot_results(results, options)
 
 
-def plot_results(results, show=True) :
+def plot_results(results, options) :
     r = results
-
-    # plot raw data and beats
-    fig1 = plt.figure(1)
-    plot_bg_colors(r.trial_starts, r.trial_ends, r.conditions, fig1)
-    plt.plot(r.time_scale, r.raw_ecg)
-    plt.plot(r.time_scale, r.raw_gsr)
-    beats = r.ecg_signal.beats
-    height = np.ones(len(beats))*np.median(r.raw_ecg)
-    plt.scatter(beats, height)
-    plt.title('raw data')
+    figs = []
     
-    # plot filtered data
-    fig2 = plt.figure(2)
-    plot_bg_colors(r.trial_starts, r.trial_ends, r.conditions, fig2)
-    plt.plot(r.gsr_signal.time_scale, r.gsr_signal.signal)
-    plt.plot(r.ecg_signal.time_scale, r.ecg_signal.signal)
-    plt.title('filtered gsr')
-
-    # plot plot means for trials
-    fig3 = plt.figure(3)
-    plot_bg_colors(r.trial_starts, r.trial_ends, r.conditions, fig3)
-    mean_trial_time = (r.trial_starts+r.trial_ends)/2
-    plt.plot(mean_trial_time, r.mean_hr_for_trials)
-    plt.plot(mean_trial_time, r.mean_hrv_for_trials)
-    plt.plot(mean_trial_time, r.mean_gsr_for_trials)
-    plt.legend(['hr','hrv','gsr'])
-    plt.title('mean for trials')
-
-    if show :
-        plt.show()
+    if 'trials' in options :
+        # plot raw data and beats for trials
+        fig = plt.figure()
+        plot_bg_colors(r.trial_starts, r.trial_ends, r.trial_conditions, fig)
+        if 'ecg' in options:
+            plt.plot(r.time_scale, r.raw_ecg)
+            beats = r.ecg_signal.beats
+            height = np.ones(len(beats))*np.median(r.raw_ecg)
+            plt.scatter(beats, height)
+        if 'gsr' in options:
+            plt.plot(r.time_scale, r.raw_gsr)
+        plt.title('raw data with trials')
+        figs.append(fig)
     
-    return fig1#, fig2, fig3
+        # plot filtered data for trials
+        fig = plt.figure()
+        plot_bg_colors(r.trial_starts, r.trial_ends, r.trial_conditions, fig)
+        if 'gsr' in options:
+            plt.plot(r.gsr_signal.time_scale, r.gsr_signal.signal)
+        if 'ecg' in options:
+            plt.plot(r.ecg_signal.time_scale, r.ecg_signal.signal)
+        plt.title('filtered gsr with trials')
+        figs.append(fig)
+
+        # plot plot means for trials
+        fig = plt.figure()
+        plot_bg_colors(r.trial_starts, r.trial_ends, r.trial_conditions, fig)
+        mean_trial_time = (r.trial_starts+r.trial_ends)/2
+        if 'ecg' in options:
+            plt.plot(mean_trial_time, r.mean_hr_for_trials, label='HR')
+            plt.plot(mean_trial_time, r.mean_hrv_for_trials, label='HRV')
+        if 'gsr' in options:
+            plt.plot(mean_trial_time, r.mean_gsr_for_trials, label='GSR')
+        plt.legend()
+        plt.title('mean for trials')
+        figs.append(fig)
+
+    if 'blocks' in options:
+        # plot raw data and beats for blocks
+        fig = plt.figure()
+        plot_bg_colors(r.block_starts, r.block_ends, r.block_conditions, fig)
+        if 'ecg' in options:
+            plt.plot(r.time_scale, r.raw_ecg)
+            beats = r.ecg_signal.beats
+            height = np.ones(len(beats))*np.median(r.raw_ecg)
+            plt.scatter(beats, height)
+        if 'gsr' in options:
+            plt.plot(r.time_scale, r.raw_gsr)
+        plt.title('raw data with blocks')
+        figs.append(fig)
+    
+        # plot filtered data for blocks
+        fig = plt.figure()
+        plot_bg_colors(r.block_starts, r.block_ends, r.block_conditions, fig)
+        if 'ecg' in options:
+            plt.plot(r.ecg_signal.time_scale, r.ecg_signal.signal)
+        if 'gsr' in options:
+            plt.plot(r.gsr_signal.time_scale, r.gsr_signal.signal)
+        plt.title('filtered gsr with blocks')
+        figs.append(fig)
+
+        # plot plot means for blocks
+        fig = plt.figure()
+        plot_bg_colors(r.block_starts, r.block_ends, r.block_conditions, fig)
+        mean_block_time = (r.block_starts+r.block_ends)/2
+        if 'ecg' in options:
+            plt.plot(mean_block_time, r.mean_hr_for_blocks, label='HR')
+            plt.plot(mean_block_time, r.mean_hrv_for_blocks, label='HRV')
+        if 'gsr' in options:
+            plt.plot(mean_block_time, r.mean_gsr_for_blocks, label='GSR')
+        plt.legend()
+        plt.title('mean for blocks')
+        figs.append(fig)
+    
+    return figs
 
 
 def get_filtered_plot(subject, session):
@@ -231,8 +287,28 @@ def save_all_plots():
                 
                 filename = directory + os.sep + subject + '_' + session + '_gsr_filtered.svg'
                 filter_.savefig(filename)
-            
+    
+"""if __name__ == '__main__':
+    import sys
+    args = sys.argv
+    if len(args) < 3 :
+        print('need arguments: subject, session')
 
+    subject = args[1]
+    session = args[2]
+    plot_subject(subject, session)
+    show()"""
+
+if __name__=='__main__':
+    import sys
+    subject = sys.argv[1]
+    session = sys.argv[2]
+    options = sys.argv[3:]
+    plot_subject(subject, session, options)
+    plt.show()
+
+
+"""
 if __name__ == '__main__':
     import sys
     args = sys.argv
@@ -245,7 +321,7 @@ if __name__ == '__main__':
         subject = args[1]
         session = args[2]
         get_filtered_plot(subject, session)
-        show()
+        show()"""
 
 
 def main():
@@ -272,7 +348,6 @@ def main():
     blocks = dpp.change_block_times_format(blocks)
 
     print(dpp.blocks_to_str(blocks,'blocks'))
-
 
     #beats, hr, hrv = dpp.process_ecg(ecg_signal, physio_time)
 

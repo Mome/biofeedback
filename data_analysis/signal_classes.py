@@ -226,11 +226,11 @@ class EcgSignal(Signal):
         RR = RR_f(np.linspace(min(times),max(times),len(times)))
         f, Pxx = periodogram(RR,freq)
         
-        plt.figure(1)
-        plt.plot(times,RR)
-        plt.figure(2)
-        plt.plot(f,Pxx)
-        plt.show()
+        #plt.figure(1)
+        #plt.plot(times,RR)
+        #plt.figure(2)
+        #plt.plot(f,Pxx)
+        #plt.show()
 
         # all in Hz
         #VLF = f < 0.04
@@ -240,8 +240,8 @@ class EcgSignal(Signal):
         LF  = sum(Pxx[lf_index])
         HF = sum(Pxx[hf_index])
 
-        print(LF,HF,LF/HF)
-        raw_input('press enter')
+        print('LF', LF, 'HF', HF, 'LF/HF', LF/HF)
+        #raw_input('press enter')
 
         return LF/HF
 

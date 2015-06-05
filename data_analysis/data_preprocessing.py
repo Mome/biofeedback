@@ -12,47 +12,54 @@ import data_access as da
 from rpeakdetect import detect_beats
 from utils import is_float, BP
 
-def process_data(physio_data, trials, subject, session) :
+def process_data(physio_data, trials, subject, session, options) :
     
     ecg_signal = signal_classes.EcgSignal(physio_data['time'], physio_data['ecg'])
     gsr_signal = signal_classes.GsrSignal(physio_data['time'], physio_data['gsr'])
     manuel_cutout(ecg_signal, subject, session)
-    process_ecg(ecg_signal)
-    process_gsr(gsr_signal)
 
     trial_starts = trials[0]
     trial_ends = trials[1]
-    conditions = trials[2]
+    trial_conditions = trials[2]
     trial_ids = trials[3]
 
-    mean_hr_for_trials = ecg_signal.mean_value_for_trials(trial_starts, trial_ends, 'hr')
-    mean_hrv_for_trials = ecg_signal.mean_value_for_trials(trial_starts, trial_ends,'hrv')
-    mean_gsr_for_trials = gsr_signal.mean_gsr_for_trials(trial_starts, trial_ends)
-    
-    blocks = da.join_trials_to_blocks(trial_starts, trial_ends, conditions)
+    blocks = da.join_trials_to_blocks(trial_starts, trial_ends, trial_conditions)
     block_starts = blocks[0]
     block_ends = blocks[1]
     block_conditions = blocks[2]
 
-    mean_hr_for_blocks = ecg_signal.mean_value_for_trials(block_starts, block_ends, 'hr')
-    mean_hrv_for_blocks = ecg_signal.mean_value_for_trials(block_starts, block_ends,'hrv')
-    mean_lf_hf_ratio_for_blocks = ecg_signal.mean_value_for_trials(block_starts, block_ends, 'lf_hf_ratio')
-    mean_gsr_for_blocks = gsr_signal.mean_gsr_for_trials(block_starts, block_ends)
+    dd = {
+        'time_scale' : np.array(physio_data['time']),
+        'raw_ecg' : np.array(physio_data['ecg']),
+        'raw_gsr' : np.array(physio_data['gsr']),
+        'trial_starts' : trial_starts,
+        'trial_ends' : trial_ends,
+        'trial_conditions' : trial_conditions,
+        'trial_ids' : trial_ids,
+        'ecg_signal' : ecg_signal,
+        'gsr_signal' : gsr_signal,
+        'block_starts' : block_starts,
+        'block_ends' : block_ends,
+        'block_conditions' : block_conditions,
+    }
 
-    dd = {}
-    dd['time_scale'] = np.array(physio_data['time'])
-    dd['raw_ecg'] = np.array(physio_data['ecg'])
-    dd['raw_gsr'] = np.array(physio_data['gsr'])
-    dd['trial_starts'] = trial_starts
-    dd['trial_ends'] = trial_ends
-    dd['conditions'] = conditions
-    dd['trial_ids'] = trial_ids
-    dd['ecg_signal'] = ecg_signal
-    dd['gsr_signal'] = gsr_signal
-    dd['mean_hr_for_trials'] = mean_hr_for_trials
-    dd['mean_hrv_for_trials'] = mean_hrv_for_trials
-    dd['mean_gsr_for_trials'] = mean_gsr_for_trials
+    if 'ecg' in options:
+        process_ecg(ecg_signal)
+        if 'trials' in options:
+            dd['mean_hr_for_trials'] = ecg_signal.mean_value_for_trials(trial_starts, trial_ends, 'hr')
+            dd['mean_hrv_for_trials'] = ecg_signal.mean_value_for_trials(trial_starts, trial_ends,'hrv')
+        if 'blocks' in options:
+            dd['mean_hr_for_blocks'] = ecg_signal.mean_value_for_trials(block_starts, block_ends, 'hr')
+            dd['mean_hrv_for_blocks'] = ecg_signal.mean_value_for_trials(block_starts, block_ends,'hrv')
+            dd['mean_lf_hf_ratio_for_blocks'] = ecg_signal.mean_value_for_trials(block_starts, block_ends, 'lf_hf_ratio')
 
+    if 'gsr' in options:
+        process_gsr(gsr_signal)
+        if 'trials' in options:
+            dd['mean_gsr_for_trials'] = gsr_signal.mean_gsr_for_trials(trial_starts, trial_ends)
+        if 'blocks' in options:
+            dd['mean_gsr_for_blocks'] = gsr_signal.mean_gsr_for_trials(block_starts, block_ends)
+    
     return collections.namedtuple('Results', dd.keys())(*dd.values())
 
 
