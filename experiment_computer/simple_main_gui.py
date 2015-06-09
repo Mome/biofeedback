@@ -150,9 +150,9 @@ class RecordButton(QPushButton):
             sample_rate = conf.default_sample_rate
 
             column_labels = ['absolute_time']
-            if not noecg :
+            if not self.main_window.noecg :
                 column_labels.append('ecg')
-            if not nogsr :
+            if not self.main_window.nogsr :
                 column_labels.append('gsr')
 
             subject.add_record(record_number, filename, session,
@@ -228,6 +228,7 @@ class TerminalButton(QPushButton):
         else:
             self.setStyleSheet("background-color: none")
             self.manager.removeWriter(self.writer)
+
 
 class RecordDialog(QDialog):
     """Dialog to enter subject and session ID."""
@@ -313,16 +314,17 @@ def start_gui():
 
 
 def main():
-    if not singleton_exists() :
-        try :
-            create_singelton()
-            start_gui()
-        finally :
-            remove_singleton()
-    else :
-        print 'Programm already running.'
-        print 'Close all other instances !! If you are sure no other instance is running remove the file "physio_singleton_lock" from your home directory.'
-        raw_input('Press ENTER to continue.')
+    start_gui()
+    #if not singleton_exists() :
+    #    try :
+    #        create_singelton()
+    #        start_gui()
+    #    finally :
+    #        remove_singleton()
+    #else :
+    #    print 'Programm already running.'
+    #    print 'Close all other instances !! If you are sure no other instance is running remove the file "physio_singleton_lock" from your home directory.'
+    #    raw_input('Press ENTER to continue.')
 
 
 if __name__ == '__main__':
