@@ -70,7 +70,7 @@ class SerialStreamReader:
                 self.ser = Serial(self.port, self.baud)
                 self.connected = True
                 return
-            except SerialException:
+            except :
                 self.connected = False
         
         while not self.connected :
