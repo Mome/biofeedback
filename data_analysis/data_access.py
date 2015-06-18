@@ -28,16 +28,22 @@ def get_data(subject, session) :
     if len(trials[0]) == 0 :
         raise DataAccessError('no trials extracted')
 
-    # transform to relative time scales
-    min_tr0 = min(trials[0])
-    min_tr1 = min(trials[1])
-    min_phy = min(physio_data['time'])
+    # get first and last timestamp
+    min_tr0  = min(trials[0])
+    min_tr1  = min(trials[1])
+    min_phy  = min(physio_data['time'])
     min_time = min(min_tr0, min_tr1, min_phy)
+    max_tr0  = max(trials[0])
+    max_tr1  = max(trials[1])
+    max_phy  = max(physio_data['time'])
+    max_time = max(max_tr0, max_tr1, max_phy)
+
+    # transform to relative time scales
     physio_data['time'] -= min_time
     trials[0] -= min_time
     trials[1] -= min_time
 
-    return physio_data, trials
+    return physio_data, trials, (min_time, max_time)
 
 
 def get_block_times(subject_number, session_number):

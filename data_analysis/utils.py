@@ -24,7 +24,7 @@ def print_percent(num):
 
 
 last_print_len = 0
-def erase_and_print(string):
+def erase_and_print(string=''):
     global last_print_len
     print('\b'*last_print_len + string, end='')
     sys.stdout.flush()

@@ -85,6 +85,7 @@ def process_gsr(gsr_signal):
     gsr_signal.low_pass('cos',50)
     
     eprint('GSR: processing finished!')
+    eprint()
 
 """
 def process_gsr(gsr_signal, time_scale):

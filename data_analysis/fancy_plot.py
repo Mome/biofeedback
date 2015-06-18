@@ -1,5 +1,6 @@
 from __future__ import division
 
+from datetime import datetime
 from collections import namedtuple
 import copy
 import os
@@ -33,12 +34,21 @@ def plot_subject(subject, session, options):
 
     options = namedtuple('Options', default_opts.keys())(**default_opts)
 
-    physio_data, trials = da.get_data(subject, session)
+    physio_data, trials, time_range = da.get_data(subject, session)
     results = dpp.process_data(physio_data, trials, subject, session, options)
     names,figs = plot_results(results, options)
 
-    for name,fig in zip(names,figs):
-        save_plot(name, fig)
+    start_time = datetime.fromtimestamp(time_range[0]).strftime('%Y-%m-%d %H:%M:%S')
+    end_time = datetime.fromtimestamp(time_range[1]).strftime('%Y-%m-%d %H:%M:%S')
+
+    print 'start_time:', start_time, ' end_time:', end_time
+
+    if options.save:
+        for name,fig in zip(names,figs):
+            save_plot(name, fig)
+
+    if options.show:
+        plt.show()
 
     
 def plot_results(results, options) :
@@ -340,61 +350,48 @@ def save_all_plots():
                 
                 filename = directory + os.sep + subject + '_' + session + '_gsr_filtered.svg'
                 filter_.savefig(filename)
-    
-"""if __name__ == '__main__':
-    import sys
-    args = sys.argv
-    if len(args) < 3 :
-        print('need arguments: subject, session')
-
-    subject = args[1]
-    session = args[2]
-    plot_subject(subject, session)
-    show()"""
 
 if __name__=='__main__':
     import sys
+    args = sys.argv[1:]
     #subject = sys.argv[1]
     #session = sys.argv[2]
 
     #subjects = [312, 315, 317, 320, 322, 329, 330] 
     # [327, 331, 332, 333,
-    subjects = [401, 405, 406, 407, 409, 410, 413, 417]
+
+    if 'save' in args:
+        subjects = [401, 405, 406, 407, 409, 410, 413, 417]
+        sessions = [1,2]
+        options = {
+            'do_gsr' : True,
+            'do_blocks' : True,
+            'figsize' : (60,30),
+            'show' : False,
+            'save' : True,
+        }
+    else:
+        subjects = raw_input('Enter Subject IDs: ').split()
+        sessions = raw_input('Enter Session IDs: ').split()
+        options = {
+            'do_gsr' : True,
+            'do_blocks' : True,
+            'show' : True,
+            'save' : False,
+        }
 
     for sub in subjects:
-        for ses in [1,2]:
-            print 'do', str(sub), str(ses)
-            subject = str(sub)
-            session = str(ses)
-            options = {
-                'do_gsr' : True,
-                'do_blocks' : True,
-                'figsize' : (60,30),
-                'show' : False,
-                'save' : True,
-            }
+        for ses in sessions:
+            sub = str(sub); ses = str(ses)
+            print 'Do Subject:', sub, 'Session:', ses
             try:
-                plot_subject(str(sub), str(ses), options)
+                plot_subject(sub, ses, options)
             except da.DataAccessError as e:
-                print 'Could not plot;  Subject:',subject,'Session:',session,'; ',type(e).__name__, ':',e
-
+                print 'Could not plot Subject:', sub, 'Session:', ses, '; ', type(e).__name__, ':', e
+            except Exception as e:
+                print 'Unexpected Error!!!', sub, 'Session:', ses, '; ', type(e).__name__, ':', e
+                print 'Call Moritz: 015774714787'
             print
-
-
-"""
-if __name__ == '__main__':
-    import sys
-    args = sys.argv
-
-    if len(args) == 1 :
-        print('need input arguments')
-    elif args[1] == 'save':
-        save_all_plots()
-    else :
-        subject = args[1]
-        session = args[2]
-        get_filtered_plot(subject, session)
-        show()"""
 
 
 def main():
