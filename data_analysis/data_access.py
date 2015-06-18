@@ -26,7 +26,7 @@ def get_data(subject, session) :
     # using my block times extraction
     trials = extract_trial_times(game_data)
     if len(trials[0]) == 0 :
-        raise Exception('no trials extracted')
+        raise DataAccessError('no trials extracted')
 
     # transform to relative time scales
     min_tr0 = min(trials[0])
@@ -93,17 +93,65 @@ def get_game_data3(subject_number, session_number = None, trial_id = None, silen
     return df
 
 
-def get_physio_data(subject_num, session_num):
-    """reads data of physiological measurement from csv. Concatinates multiple records for one session."""
-    subject_num = str(subject_num)
-    session_num = str(session_num)
+def get_physio_data(subject, session):
+    subject = str(subject)
+    session = str(session)
+    if int(subject) < 400:
+        physio_data = get_physio_data_old(subject, session)
+    else:
+        physio_data = get_physio_data_new(subject, session)
+
+    if len(physio_data['time']) == 0:
+        raise DataAccessError('No physio data in recordfiles: Subject: '+subject+', Session: '+session )
+
+    return physio_data
+
+
+def get_physio_data_new(subject_num, session_num):
+    """Reads data for only GSR recordings with absolute time"""
     
     subject_path = pathlib.Path(PHYSIO_PATH + '/subject_' + subject_num)
-    meta_file_path = subject_path.joinpath('physio_meta_' + subject_num + '.yml') 
     
+    if not subject_path.exists() :
+        raise DataAccessError('Subject folder not found !')
+
+    # load recodrs and set to absolute time
+    physio_data = pd.DataFrame()
+    pattern = 'physio_record_' + subject_num + '_' + session_num + '_*.csv'
+
+    # raise error is no data files found    
+    if len(list(subject_path.glob(pattern)))==0:
+        raise DataAccessError('No record files: '+str(subject_path))
+
+    for record_path in subject_path.glob(pattern) :
+       
+        # load physio_data
+        physio_record = pd.read_csv(
+            str(record_path),
+            comment='#',
+            )
+        
+        # concatinate to other records
+        physio_data = physio_data.append(physio_record, ignore_index=True)
+
+    # change keyname absolute_time to time
+    physio_data = physio_data.rename(columns={'absolute_time':'time','gsr':'gsr'})
+        
+    # sort records by time
+    physio_data = physio_data.sort('time')
+    
+    return physio_data
+
+
+def get_physio_data_old(subject_num, session_num):
+    """reads data of physiological measurement from csv. Concatinates multiple records for one session. returns absolute times"""
+        
+    subject_path = pathlib.Path(PHYSIO_PATH + '/subject_' + subject_num)
+    meta_file_path = subject_path.joinpath('physio_meta_' + subject_num + '.yml')
+
     #print(subject_path)
     if not subject_path.exists() :
-        raise Exception('Subject folder not found !')
+        raise DataAccessError('Subject folder not found: '+str(subject_path))
     
     # open metadata file
     with meta_file_path.open() as yaml_file :
@@ -119,7 +167,11 @@ def get_physio_data(subject_num, session_num):
     physio_data = pd.DataFrame(columns=column_names)
     pattern = 'physio_record_' + subject_num + '_' + session_num + '_*.csv'
 
-    for record_path in subject_path.glob(pattern) :
+    # raise error is no data files found
+    if len(list(subject_path.glob(pattern)))==0:
+        raise DataAccessError('No record files: '+str(subject_path))
+
+    for record_path in subject_path.glob(pattern):
        
         # load physio_data
         physio_record = pd.read_csv(
@@ -160,7 +212,7 @@ def load_configurations() :
         config = parser.read(file_path)
     else :
         parser['PATH'] = {}
-        parser['PATH']['PATH_TO_DB'] = os.path.expanduser('~/inlusio_data/InlusioDB_260225.sqlite')
+        parser['PATH']['PATH_TO_DB'] = os.path.expanduser('~/inlusio_data/InlusioDB_Juni_2015.sqlite')
         parser['PATH']['PHYSIO_PATH'] = os.path.expanduser('~/inlusio_data')
         print('Creating new configuration file!!!')
         print('Please fit conf.ini to your local data path!')
@@ -177,7 +229,7 @@ def only_get_physio_starting_times(subject_num):
     
     #print(subject_path)
     if not subject_path.exists() :
-        raise Exception('Subject folder not found !')
+        raise DataAccessError('Subject folder not found !')
     
     # open metadata file
     with meta_file_path.open() as yaml_file :
@@ -237,10 +289,10 @@ def extract_trial_times(df):
     # check for double trial_ids
     d = pl.sort(start_ids, axis=None)
     if any(d[d[1:] == d[:-1]]) :
-        raise Exception('double start trial ids')
+        raise DataAccessError('double start trial ids')
     d = pl.sort(end_ids, axis=None)
     if any(d[d[1:] == d[:-1]]) :
-        raise Exception('double end trial ids')
+        raise DataAccessError('double end trial ids')
 
     blocks = []
     for si in range(len(start_ids)) :
@@ -253,9 +305,9 @@ def extract_trial_times(df):
         ei = match[0]
 
         if start_types[si] != end_types[ei] :
-            raise Exception('Unequal types for start and endtrial ' + str(sid))
+            raise DataAccessError('Unequal types for start and endtrial ' + str(sid))
         elif len(match) > 1 :
-            raise Exception('more than one match')
+            raise DataAccessError('more than one match')
 
         start_time = start_times[si]
         end_time = end_times[ei]
@@ -295,6 +347,11 @@ def join_trials_to_blocks(start_times, end_times, start_types):
 
     return [start_times, end_times, start_types]
 
+
+class DataAccessError(Exception):
+    def __init__(self, message):
+        super(DataAccessError, self).__init__(message)
+
 config = load_configurations()
 
 #PATH_TO_DB = os.path.expanduser('~/code/biofeedback/data/InlusioDB.sqlite')
@@ -305,4 +362,4 @@ config = load_configurations()
 
 PATH_TO_DB = config['PATH']['PATH_TO_DB']
 PHYSIO_PATH = config['PATH']['PHYSIO_PATH']
-subjects = [312,315,317,320,321,322,323,328,329,330]
+#subjects = [312,315,317,320,321,322,323,328,329,330]

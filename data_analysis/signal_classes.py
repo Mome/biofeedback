@@ -1,6 +1,6 @@
 from __future__ import division
 
-from scipy.signal import periodogram
+from scipy.signal import periodogram, medfilt
 from scipy.interpolate import interp1d
 import numpy as np
 import matplotlib.pyplot as plt
@@ -42,11 +42,21 @@ class Signal(object) :
                 signal[i] = (signal[i-1] + signal[i+1])/2
 
     def remove_nans(self):
-        where_no_nans = ~np.isnan(self.signal)
-        self.signal = self.signal[where_no_nans]
-        self.time_scale = self.time_scale[where_no_nans]
+        nan_indices = np.isnan(self.signal)
+        self.nan_times = self.time_scale[nan_indices]
+        self.signal = self.signal[~nan_indices]
+        self.time_scale = self.time_scale[~nan_indices]
 
-    def filter_median(self,size=5):
+    def get_signal_with_nans(self):
+        """get signal with original nan values inside the signal"""
+        pairs = zip(self.time_scale, self.signal)
+        nan_pairs = zip(self.nan_times,[float('nan')]*len(self.nan_times))
+        pairs.extend(nan_pairs)
+        pairs.sort()
+        time_scale, signal = zip(*pairs)
+        return np.array(time_scale), np.array(signal)
+
+    """def filter_median(self,size=5):
         signal = self.signal
         out = np.zeros(len(signal))
         for i in range(len(signal)) :
@@ -60,7 +70,53 @@ class Signal(object) :
                 r  = i+size
             med = np.median(signal[l:r])
             out[i] = med
-        self.signal = out
+        self.signal = out"""
+
+    def filter_median(self, size=5):
+        self.signal = medfilt(self.signal, size)
+
+    def low_pass(self, kernel_type, kernel_size):
+        signal = self.signal
+        N = kernel_size
+        cos = np.cos
+        pi = np.pi
+        arange = np.arange
+        convolve = np.convolve
+        nansum = np.nansum
+
+        # filter nans
+        #nans_index = (signal!=signal)
+        #signal[nans_index]
+
+        if kernel_type == 'rect':
+            kernel = 1.0/N * ones(N)
+
+        elif kernel_type == 'cos':
+            N = kernel_size
+            kernel = 0.5*(1-cos(2*pi*arange(N)/(N-1)))
+
+        elif kernel_type == 'turkey':
+
+            def turkey(n,N,alpha) :
+                bound_1 = alpha*(N-1)/2
+                bound_2 = (extract_block_times_form_game_dataN-1)*(1-alpha/2)
+                if 0 <= n < bound_1 :
+                    return (1/2)*(1+cos(pi*(2*n/(alpha*(N-1))-1)))
+                elif bound_1 <= n <= bound_2 :
+                    return 1.0
+                elif bound_2 < n <= N-1 :
+                    return (1/2)*(1+cos(pi*(2*n/(alpha*(N-1))-alpha/2+1)))
+                else :
+                    return 0
+
+            turkey = vectorize(turkey)
+            #kernel = turkey()
+        else :
+            raise Exception('No such kernel: ' + kernel_type) 
+        out = convolve(signal, kernel, mode='same')
+        factor = nansum(signal)/nansum(out)
+        
+        self.signal = out*factor
 
 
 class EcgSignal(Signal):

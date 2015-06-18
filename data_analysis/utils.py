@@ -22,6 +22,15 @@ def print_percent(num):
     print('\b\b\b' + num + '%', end='')
     sys.stdout.flush()
 
+
+last_print_len = 0
+def erase_and_print(string):
+    global last_print_len
+    print('\b'*last_print_len + string, end='')
+    sys.stdout.flush()
+    last_print_len = len(string)
+
+
 def is_float(num):
     try:
         float(num)

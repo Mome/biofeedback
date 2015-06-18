@@ -1,6 +1,7 @@
 import collections
 import datetime
 import time
+import sys
 
 import numpy as np
 import pandas as pd
@@ -10,13 +11,10 @@ import signal_classes
 
 import data_access as da
 from rpeakdetect import detect_beats
-from utils import is_float, BP
+from utils import is_float, BP, erase_and_print as eprint
+
 
 def process_data(physio_data, trials, subject, session, options) :
-    
-    ecg_signal = signal_classes.EcgSignal(physio_data['time'], physio_data['ecg'])
-    gsr_signal = signal_classes.GsrSignal(physio_data['time'], physio_data['gsr'])
-    manuel_cutout(ecg_signal, subject, session)
 
     trial_starts = trials[0]
     trial_ends = trials[1]
@@ -30,40 +28,43 @@ def process_data(physio_data, trials, subject, session, options) :
 
     dd = {
         'time_scale' : np.array(physio_data['time']),
-        'raw_ecg' : np.array(physio_data['ecg']),
-        'raw_gsr' : np.array(physio_data['gsr']),
         'trial_starts' : trial_starts,
         'trial_ends' : trial_ends,
         'trial_conditions' : trial_conditions,
         'trial_ids' : trial_ids,
-        'ecg_signal' : ecg_signal,
-        'gsr_signal' : gsr_signal,
         'block_starts' : block_starts,
         'block_ends' : block_ends,
         'block_conditions' : block_conditions,
     }
 
-    if 'ecg' in options:
+    if options.do_ecg:
+        ecg_signal = signal_classes.EcgSignal(physio_data['time'], physio_data['ecg'])
+        manuel_cutout(ecg_signal, subject, session)
         process_ecg(ecg_signal)
-        if 'trials' in options:
+        dd['raw_ecg'] = np.array(physio_data['ecg'])
+        dd['ecg_signal'] = ecg_signal
+        if options.do_trials:
             dd['mean_hr_for_trials'] = ecg_signal.mean_value_for_trials(trial_starts, trial_ends, 'hr')
             dd['mean_hrv_for_trials'] = ecg_signal.mean_value_for_trials(trial_starts, trial_ends,'hrv')
-        if 'blocks' in options:
+        if options.do_blocks:
             dd['mean_hr_for_blocks'] = ecg_signal.mean_value_for_trials(block_starts, block_ends, 'hr')
             dd['mean_hrv_for_blocks'] = ecg_signal.mean_value_for_trials(block_starts, block_ends,'hrv')
             dd['mean_lf_hf_ratio_for_blocks'] = ecg_signal.mean_value_for_trials(block_starts, block_ends, 'lf_hf_ratio')
 
-    if 'gsr' in options:
+    if options.do_gsr:
+        gsr_signal = signal_classes.GsrSignal(physio_data['time'], physio_data['gsr'])
         process_gsr(gsr_signal)
-        if 'trials' in options:
+        dd['raw_gsr'] = np.array(physio_data['gsr'])
+        dd['gsr_signal'] = gsr_signal
+        if options.do_trials:
             dd['mean_gsr_for_trials'] = gsr_signal.mean_gsr_for_trials(trial_starts, trial_ends)
-        if 'blocks' in options:
+        if options.do_blocks:
             dd['mean_gsr_for_blocks'] = gsr_signal.mean_gsr_for_trials(block_starts, block_ends)
     
     return collections.namedtuple('Results', dd.keys())(*dd.values())
 
 
-def process_ecg(ecg_signal) :
+def process_ecg(ecg_signal, silent=False):
     ecg_signal.remove_nans()
     ecg_signal.detect_beats()
     #ecg_signal._detect_compressions()
@@ -72,11 +73,18 @@ def process_ecg(ecg_signal) :
     ecg_signal.remove_small_intervalls()
 
 
-def process_gsr(gsr_signal) :
+def process_gsr(gsr_signal):
     gsr_signal.remove_nans()
     gsr_signal.remove_invalid_values()
-    #gsr_signal.filter_median(size=3)
-    gsr_signal.filter_median(size=5)
+    #gsr_signal.filter_median(size=5)
+
+    eprint('GSR: median filtering')
+    gsr_signal.filter_median(size=3)
+
+    eprint('GSR: lowpass filtering')
+    gsr_signal.low_pass('cos',50)
+    
+    eprint('GSR: processing finished!')
 
 """
 def process_gsr(gsr_signal, time_scale):
@@ -344,7 +352,6 @@ def test_block_times2(subject, session):
 
 if __name__ == '__main__':
     print(da.PATH_TO_DB)
-    import sys
     args = sys.argv
     
     if args[1] == 'all' :

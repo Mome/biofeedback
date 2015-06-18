@@ -1,6 +1,11 @@
+from __future__ import division
+
+from collections import namedtuple
 import copy
+import os
 import time
 
+from matplotlib import rc
 import matplotlib.pyplot as plt
 import matplotlib.collections as collections
 import numpy as np
@@ -9,102 +14,132 @@ import data_preprocessing as dpp
 import data_access as da
 
 
-def plot_subject(subject, session, options) :
+def plot_subject(subject, session, options):
     """Load, Process and plot data for one subject/session pair.
 
-       Possible options: ('ecg','gsr','blocks','trials','plot_beats')
+       Possible options: ('ecg','gsr','blocks','trials','plot_beats','show','save')
     """
 
-    #option_keys =('do_ecg','do_gsr','do_blocks','do_trials','show')
-    #options.update(dict.fromkeys(option_keys, False)) # fill missing keys with False
-    #options = namedtuple('Options', options.keys())(**options)
+    # transform all keys to lower case
+    options = {key.lower():value for key, value in options.items()}
 
-    options = [opt.lower() for opt in options]
+    # add missing keys to options and transform to namedtuple
+    option_keys =('do_ecg','do_gsr','do_blocks','do_trials')
+    default_opts = dict.fromkeys(option_keys, False)
+    default_opts.update(options)
+
+    if 'figsize' not in default_opts:
+        default_opts['figsize'] = (15,10)
+
+    options = namedtuple('Options', default_opts.keys())(**default_opts)
 
     physio_data, trials = da.get_data(subject, session)
     results = dpp.process_data(physio_data, trials, subject, session, options)
-    plot_results(results, options)
+    names,figs = plot_results(results, options)
 
+    for name,fig in zip(names,figs):
+        save_plot(name, fig)
 
+    
 def plot_results(results, options) :
     r = results
     figs = []
+    names = []
     
-    if 'trials' in options :
+    if options.do_trials :
         # plot raw data and beats for trials
-        fig = plt.figure()
-        plot_bg_colors(r.trial_starts, r.trial_ends, r.trial_conditions, fig)
-        if 'ecg' in options:
+        fig = plt.figure(figsize=options.figsize)
+        yrange = (min(r.raw_ecg), max(r.raw_ecg)-min(r.raw_ecg))
+        plot_bg_colors(r.trial_starts, r.trial_ends, r.trial_conditions, fig, yrange)
+        if options.do_ecg:
             plt.plot(r.time_scale, r.raw_ecg)
             beats = r.ecg_signal.beats
             height = np.ones(len(beats))*np.median(r.raw_ecg)
             plt.scatter(beats, height)
-        if 'gsr' in options:
+        if options.do_gsr:
             plt.plot(r.time_scale, r.raw_gsr)
-        plt.title('raw data with trials')
+        name = 'raw_data_with_trials'
+        plt.title(name)
         figs.append(fig)
+        names.append(name)
     
         # plot filtered data for trials
-        fig = plt.figure()
+        fig = plt.figure(figsize=options.figsize)
         plot_bg_colors(r.trial_starts, r.trial_ends, r.trial_conditions, fig)
-        if 'gsr' in options:
-            plt.plot(r.gsr_signal.time_scale, r.gsr_signal.signal)
-        if 'ecg' in options:
+        if options.do_ecg:
             plt.plot(r.ecg_signal.time_scale, r.ecg_signal.signal)
-        plt.title('filtered gsr with trials')
+        if options.do_gsr:
+            plt.plot(r.gsr_signal.time_scale, r.gsr_signal.signal)
+        name = 'filtered_gsr_with_trials'
+        plt.title(name)
         figs.append(fig)
+        names.append(name)
 
         # plot plot means for trials
-        fig = plt.figure()
+        fig = plt.figure(figsize=options.figsize)
         plot_bg_colors(r.trial_starts, r.trial_ends, r.trial_conditions, fig)
         mean_trial_time = (r.trial_starts+r.trial_ends)/2
-        if 'ecg' in options:
+        if options.do_ecg:
             plt.plot(mean_trial_time, r.mean_hr_for_trials, label='HR')
             plt.plot(mean_trial_time, r.mean_hrv_for_trials, label='HRV')
-        if 'gsr' in options:
+        if options.do_gsr:
             plt.plot(mean_trial_time, r.mean_gsr_for_trials, label='GSR')
         plt.legend()
-        plt.title('mean for trials')
+        name = 'mean_with_trials'
+        plt.title(name)
         figs.append(fig)
+        names.append(name)
 
-    if 'blocks' in options:
-        # plot raw data and beats for blocks
-        fig = plt.figure()
-        plot_bg_colors(r.block_starts, r.block_ends, r.block_conditions, fig)
-        if 'ecg' in options:
+    if options.do_blocks:
+        """# plot raw data and beats for blocks
+        fig = plt.figure(figsize=options.figsize)
+        yrange = (min(r.raw_gsr), max(r.raw_gsr)-min(r.raw_gsr))
+        plot_bg_colors(r.block_starts, r.block_ends, r.block_conditions, fig, yrange)
+        if options.do_ecg:
             plt.plot(r.time_scale, r.raw_ecg)
             beats = r.ecg_signal.beats
             height = np.ones(len(beats))*np.median(r.raw_ecg)
             plt.scatter(beats, height)
-        if 'gsr' in options:
+        if options.do_gsr:
             plt.plot(r.time_scale, r.raw_gsr)
-        plt.title('raw data with blocks')
+        name = 'raw_data_with_blocks'
+        plt.title(name)
         figs.append(fig)
+        names.append(name)"""
     
         # plot filtered data for blocks
-        fig = plt.figure()
-        plot_bg_colors(r.block_starts, r.block_ends, r.block_conditions, fig)
-        if 'ecg' in options:
+        fig = plt.figure(figsize=options.figsize)
+        yrange = (0,max(r.gsr_signal.signal))
+        plot_bg_colors(r.block_starts/60, r.block_ends/60, r.block_conditions, fig, yrange)
+        if options.do_ecg:
             plt.plot(r.ecg_signal.time_scale, r.ecg_signal.signal)
-        if 'gsr' in options:
-            plt.plot(r.gsr_signal.time_scale, r.gsr_signal.signal)
+        if options.do_gsr:
+            time_scale, gsr_signal = r.gsr_signal.get_signal_with_nans()
+            plt.plot(time_scale/60, gsr_signal)
+            plt.ylim(yrange)
+            plt.xlabel('time in minutes')
+        name ='filtered_gsr_with_blocks'
         plt.title('filtered gsr with blocks')
         figs.append(fig)
+        names.append(name)
 
         # plot plot means for blocks
-        fig = plt.figure()
-        plot_bg_colors(r.block_starts, r.block_ends, r.block_conditions, fig)
+        """fig = plt.figure(figsize=options.figsize)
+        yrange = (0, max(r.mean_gsr_for_blocks)-min(r.mean_gsr_for_blocks))
+        plot_bg_colors(r.block_starts, r.block_ends, r.block_conditions, fig, yrange)
         mean_block_time = (r.block_starts+r.block_ends)/2
-        if 'ecg' in options:
+        if options.do_ecg:
             plt.plot(mean_block_time, r.mean_hr_for_blocks, label='HR')
             plt.plot(mean_block_time, r.mean_hrv_for_blocks, label='HRV')
-        if 'gsr' in options:
+        if options.do_gsr:
             plt.plot(mean_block_time, r.mean_gsr_for_blocks, label='GSR')
+        name = 'mean_for_blocks'
         plt.legend()
-        plt.title('mean for blocks')
+        plt.title(name)
         figs.append(fig)
+        names.append(name)"""
     
-    return figs
+    return names, figs
 
 
 def get_filtered_plot(subject, session):
@@ -154,7 +189,10 @@ def get_filtered_plot(subject, session):
     return no_filter_lot, filter_lot, block_time_str
 
 
-def plot_bg_colors(start_times, end_times, conditions, fig=None, yrange=[0,10]) :
+def plot_bg_colors(start_times, end_times, conditions, fig=None, yrange=None) :
+
+    if yrange is None:
+        yrange = [0,10]
     
     #start_times, end_times, condtitions = \
     #    da.join_trials_to_blocks(start_times, end_times, conditions)
@@ -243,13 +281,28 @@ def plot_with_backcolors(block_times, signal, time_scale):
 
     return figure
 
+def save_plot(name, fig):
+    directory = os.path.expanduser('~/inlusio_plots')
+    if not os.path.exists(directory):
+        print('mkdir', directory)
+        os.mkdir(directory)
+    
+    font = {#'family' : 'normal',
+        'weight' : 'bold',
+        'size'   : 40
+    }
+    rc('font', **font)
+    
+    filename = directory + os.sep + subject + '_' + session + '_' + name + '.png'
+    fig.savefig(filename)
+
 
 def save_all_plots():
     print('database:', da.PATH_TO_DB)
     print('PHYSIO_PATH', da.PATH_TO_DB)
     import os
     directory = os.path.expanduser('~/inlusio_plots')
-    if not os.path.exists(directory) :
+    if not os.path.exists(directory):
         print('mkdir', directory)
         os.mkdir(directory)
     subject_folders = os.listdir(da.PHYSIO_PATH)
@@ -301,11 +354,31 @@ def save_all_plots():
 
 if __name__=='__main__':
     import sys
-    subject = sys.argv[1]
-    session = sys.argv[2]
-    options = sys.argv[3:]
-    plot_subject(subject, session, options)
-    plt.show()
+    #subject = sys.argv[1]
+    #session = sys.argv[2]
+
+    #subjects = [312, 315, 317, 320, 322, 329, 330] 
+    # [327, 331, 332, 333,
+    subjects = [401, 405, 406, 407, 409, 410, 413, 417]
+
+    for sub in subjects:
+        for ses in [1,2]:
+            print 'do', str(sub), str(ses)
+            subject = str(sub)
+            session = str(ses)
+            options = {
+                'do_gsr' : True,
+                'do_blocks' : True,
+                'figsize' : (60,30),
+                'show' : False,
+                'save' : True,
+            }
+            try:
+                plot_subject(str(sub), str(ses), options)
+            except da.DataAccessError as e:
+                print 'Could not plot;  Subject:',subject,'Session:',session,'; ',type(e).__name__, ':',e
+
+            print
 
 
 """
