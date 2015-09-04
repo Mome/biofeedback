@@ -55,7 +55,9 @@ def runProcess(exe):
 def server(ip, port):
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     appname = 'get_sensor_data' # name of executable, that reads out the data
+    print 'send data to: ' + ip + ', ' + str(port)
     for line in runProcess(appname):
+	#print 'send data: ', line.strip()
         sock.sendto(line.strip(), (ip, port))
 
 
@@ -63,6 +65,7 @@ def client(port):
     #ip = '10.42.0.1'
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     sock.bind(('', port))
+    print 'try to read from port:', str(port)
     while 1:
         data, addr = sock.recvfrom(1024)
         print "received message:", data
