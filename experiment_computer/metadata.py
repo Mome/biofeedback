@@ -14,31 +14,22 @@ class Subject:
         self.file_path = path + os.sep + conf.metadata_file_prefix + '_' + str(subject_id) + '.yml'
 
         if os.path.exists(self.file_path) :
-            with open(self.file_path) as f:
-                d = yaml.load(open(self.file_path,'r'))
+            with open(self.file_path, 'r') as f:
+                d = yaml.load(f)
             self.subject_id = d['subject_id']
-            self.comment = d['comment']
             self.records = d['records']
         else :
             self.subject_id = subject_id
-            self.comment = ''
             self.records = []
             self.save()
 
     def get_dict(self):
         d = {}
         d['subject_id'] = self.subject_id
-        d['comment'] = self.comment
         d['records'] = self.records
         return d
 
-    def get_comment(self):
-        return self.comment
-
-    def set_comment(self,comment):
-        self.comment = comment
-
-    def add_record(self, number, file_name, session, start_time, source, sample_rate, column_labels, marker, comment):
+    def add_record(self, number, file_name, session, start_time, source, sample_rate, column_labels):
         d = {}
 
         d['number'] = number
@@ -46,8 +37,6 @@ class Subject:
         d['session'] = session
         d['start_time'] = start_time
         d['sample_rate'] = sample_rate
-        d['comment'] = comment
-        d['marker'] = marker
         d['source'] = source
 
         for i, label in enumerate(column_labels):
@@ -56,11 +45,16 @@ class Subject:
         self.records.append(d)
         self.save()
 
-    def get_next_record_number(self):
-        if self.records == [] :
+    def get_next_record_number(self, session):
+
+        valid_numbers = [r['number'] for r in self.records if r['session']==session]
+        print valid_numbers
+
+        if len(valid_numbers) == 0:
             next_number = 0
-        else:
-            next_number=max([r['number'] for r in self.records])+1
+        else :
+            next_number = max(valid_numbers)+1
+
         return next_number
 
     def save(self):

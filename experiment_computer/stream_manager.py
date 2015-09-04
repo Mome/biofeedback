@@ -1,4 +1,3 @@
-import glob
 import itertools
 import math
 import os
@@ -9,17 +8,27 @@ import sys
 import threading
 import time
 
-
 import numpy as np
 try :
     import pyqtgraph as pg
     from pyqtgraph.Qt import QtGui, QtCore
 except ImportError as ie:
     print 'Print Graphical Plotting not possible :', str(ie)
-import serial
-from serial.tool.list_ports import comports as list_comports
+from serial import Serial, SerialException
+
+try :
+    from serial.tools.list_ports import comports as list_comports
+except :
+    print 'autochoose port for arduino not available, possibly update pyserial'
+
+try :
+    import winsound
+except :
+    print 'Winsound not available !'
+
 
 import configurations as conf
+from utils import is_float
 
 
 class UdpStreamReader:
@@ -34,79 +43,80 @@ class UdpStreamReader:
         return data
 
 
-class SerialStreamReader():
+class SerialStreamReader:
+    """Reads data from USB-port."""
 
-    def __init__(self, port, baud=115200):    
+    def __init__(self, port, baud=115200):
         self.port = port
         self.baud = baud
-        self.ser = serial.Serial(port, baud)
         self.sleeping_time = 0.1
-        self.disconnected = False
+        self.connected = False
+        self.reconnect()
     
     def read(self): 
         
-       try :
+        try :
             return self.ser.readline().strip()
-        except SerialException :
-            if not self.disconnected :
-                print 'Serial disconnected'
+        except SerialException:
+            print 'Serial disconnected'
+            self.connected = False
+            self.reconnect()
+            return self.ser.readline().strip()
+    
+    def reconnect(self):
+    
+        if self.port != 'auto':
+            try :
+                self.ser = Serial(self.port, self.baud)
+                self.connected = True
+                return
+            except :
+                self.connected = False
+        
+        while not self.connected :
+            port = self.autochoose_port()
+            while port == None :
+                port = self.autochoose_port()
+                time.sleep(self.sleeping_time)
+            self.port = port
+            try :
+                self.ser = Serial(self.port, self.baud)
+                self.connected = True
+            except :
+                self.connected = False
+        
+        print 'Connected to', self.port
     
     def autochoose_port(self):
-	
-        if sys.platform.startswith('linux') :
-            os = 'linux'
-        elif sys.platform.startswith('win') :
-            os = 'win'
+        """Automatically chooses the comport where the device information is
+           identically to a string saved in the configurations file.
+           Trimmed to last information from pyserial's list_comports method"""
+        
+        if sys.platform.startswith('linux'):
+            target_port_id = conf.linux_port_id_2
+        elif sys.platform.startswith('win'):
+            target_port_id = conf.win_port_id_2
         else :
             print 'Port autochoose not supported for', os.platform
         
-        for port, port_id_1, port_id_2  in list_comports() :
-            if os == 'linux' : 
-                pass
+        target_port = None
+        
+        for port, port_id_1, port_id_2  in list_comports():
             
-            
-            
-            
-            
-    @classmethod
-    def list_serial_ports(cls):
-        """Lists serial ports
-
-        :raises EnvironmentError:
-            On unsupported or unknown platforms
-        :returns:
-            A list of available serial ports
-        """
-        if sys.platform.startswith('win'):
-            ports = ['COM' + str(i + 1) for i in range(256)]
-
-        elif sys.platform.startswith('linux') or sys.platform.startswith('cygwin'):
-            # this is to exclude your current terminal "/dev/tty"
-            ports = glob.glob('/dev/tty[A-Za-z]*')
-
-        elif sys.platform.startswith('darwin'):
-            ports = glob.glob('/dev/tty.*')
-
-        else:
-            raise EnvironmentError('Unsupported platform')
-
-        result = []
-        for port in ports:
-            try:
-                s = serial.Serial(port)
-                s.close()
-                result.append(port)
-            except (OSError, serial.SerialException):
-                pass
-        return result 
+            if port_id_2 == target_port_id:
+                target_port = port
+                break
+        
+        return target_port
 
 
 class DummyStreamReader:
+    """Stream dummy for testing."""
     
     def __init__(self, mean_sleep=0.1, std_sleep=0.001, funcs=['ecg','sin']):
         self.port = 'DummyPort'
 
-        for i,func in enumerate(funcs) :
+        for i,func in enumerate(funcs):
             if func == 'ecg':
                 mean_sleep = 0.0078125 #128Hz
                 # reads lines from ecg file, puts it in an iterator and converts it to a function
@@ -117,7 +127,7 @@ class DummyStreamReader:
                     funcs[i] = lambda _ : ecg_iter.next()
             elif func == 'sin':
                 funcs[i] = math.sin
-            elif func == 'cos' :
+            elif func == 'cos':
                 funcs[i] = math.cos
             else :
                 funcs[i] = lambda _ : 1
@@ -137,17 +147,24 @@ class DummyStreamReader:
 
 
 class FileWriter:
+    """Writes data to a file."""
 
-    def __init__(self, filepath, timed=True):
+    def __init__(self, file_path, timed='absolute', columns=None, lanes=None):
         
         # dont know if I still need that #
-        if os.path.exists(filepath) :
-            raise Exception('Datafile ' + filepath + ' already exists !')
+        if os.path.exists(file_path) :
+            raise Exception('Datafile ' + file_path + ' already exists !')
 
-        self.file = open(filepath,'a')
-        self.filepath = filepath
+        self.file = open(file_path,'a')
+        self.file_path = file_path
         self.timed=timed
         self.set_starting_time()
+        self.lanes = lanes
+        self.columns = columns
+
+        self.file.write(conf.data_delimiter.join(columns) + '\n')
+
+
 
     def set_starting_time(self,starting_time=None) :
         if starting_time == None :
@@ -156,11 +173,20 @@ class FileWriter:
             self.starting_time = starting_time
 
     def write(self,data):
-        if self.timed :
+
+        data = data.split(conf.data_delimiter)
+
+        if self.lanes != None :
+            data = [data[i] for i in self.lanes]
+
+        if self.timed == 'absolute':
+            data = [time.time().__repr__()] + data
+        elif self.timed == 'relative':
             time_elapse = str(int(round((time.time()-self.starting_time) * 1000)))
-            self.file.write(time_elapse + conf.data_delimiter + data + '\n')
-        else :
-            self.file.write(data + '\n')
+            data = [time_elapse] + data
+
+        data = conf.data_delimiter.join(data)
+        self.file.write(data + '\n')
 
     def close(self):
         self.file.close()
@@ -176,6 +202,10 @@ class FileWriter:
         else : """
         
         subject_id = str(subject_id)
+        session = str(session)
+
+        folder_path = os.path.normpath(conf.data_path + os.sep +'subject_' + subject_id)
+        file_beginning = 'physio_record_' + subject_id + '_' + session + '_'
 
         # find right file ending for data_delimiter
         if conf.data_delimiter == ',' :
@@ -186,10 +216,14 @@ class FileWriter:
             ending = '.ssv'
         else :
             ending = '.dsv'
+        
+        # put this to another place
+        if not os.path.exists(folder_path) :
+            os.makedirs(folder_path)
 
-        if record_number == None :
-            file_list = os.listdir(conf.data_path)
-            file_list = [f[4:-4] for f in file_list if f.startswith(subject_id)]
+        if record_number == None :#and os.path.exists(folder_path):
+            file_list = os.listdir(folder_path)
+            file_list = [f[len(file_beginning):-len(ending)] for f in file_list if f.startswith(file_beginning)]
             file_list = [int(f) for f in file_list if f.isdigit()]
             if file_list == [] :
                 record_number = 0
@@ -205,19 +239,14 @@ class FileWriter:
         
         record_number = str(record_number)
         
-        filename = 'physio_record_' + subject_id + '_' + str(session) + '_' + record_number + ending
+        filename = file_beginning + record_number + ending
         
-        folder_path = os.path.normpath(conf.data_path + '/subject_' + str(subject_id))
-        
-        if not os.path.exists(folder_path) :
-            os.makedirs(folder_path)
-        
-        filepath =  folder_path + '/' + filename
+        file_path =  folder_path + os.sep + filename
         
         #if os.path.exists(file_ path) :
         #    raise Exception('File already exists. Wont overwrite data!')
 
-        return filepath
+        return file_path
         
         
 class RamWriter:
@@ -236,18 +265,24 @@ class RamWriter:
 
 
 class TermWriter:
+    """Write data to stdout."""
 
     def write(self, data):
         print data
 
 
 class GraphicalWriter:
+    """Animated plot using pyqtgraph."""
     
-    def __init__(self, lanes, data_buffer_size=500, plot_type=1):
+    def __init__(self, lanes, data_buffer_size=700, plot_type=1, app=None):
         self.lanes = lanes
         self.data_buffer_size = data_buffer_size
         self.plot_type = plot_type
-        self.app = QtGui.QApplication([])
+
+        if app == None :
+            self.app = QtGui.QApplication([])
+        else :
+            self.app = app
 
         self.plots = []
         self.curves = []
@@ -264,6 +299,7 @@ class GraphicalWriter:
                 p.setXRange(0,data_buffer_size,False)
             self.plots.append(p)
             self.curves.append(p.plot())
+            self.plt = p
         
         self.index = 0
         
@@ -272,13 +308,14 @@ class GraphicalWriter:
         self.data = np.zeros((len(lanes),data_buffer_size))
     
     def write(self,new_data):
-        new_data = np.array([float(d) for d in new_data.split(conf.data_delimiter)])
+        try :
+            new_data = np.array([float(d) for d in new_data.split(conf.data_delimiter)])
+        except ValueError as ve:
+            print str(ve), new_data
+            return
         new_data = new_data[self.lanes]
         self.data[:,self.index] = new_data
-        # silly noise reduction #
-        #prev_index = (self.index-1)%self.data_buffer_size
-        # self.data[:,self.index] = (self.data[:,prev_index]*0.9 + self.data[:,self.index]*0.1)
-        # --------------------- #
+        
         self.index = (self.index+1)%self.data_buffer_size
     
     def update(self):
@@ -290,36 +327,134 @@ class GraphicalWriter:
                 plot_data = np.hstack([plot_data[self.index:],plot_data[:self.index]])
                 
             self.curves[l].setData(plot_data)
-            self.app.processEvents()
+        self.app.processEvents()
     
     def start(self):
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.update)
         self.timer.start(16.6)
 
+# fix this to be usable with lane parameter
+class AudioWriter:
+    """Plays a beep sound, if data recording leaves valid range."""
+ 
+    def __init__(self):
+        self.ecg_upper_limit = 5.0
+        self.ecg_lower_limit = 0.0
+        self.gsr_upper_limit = float('inf')
+        self.gsr_lower_limit = -1.0
+        
+        self.data_error_freq = 1500
+        self.gsr_freq = 1000
+        self.ecg_freq = 500
+        
+        self.duration = 120 # msecs
+        self.wait_time = 2.5
+
+        self.sound_list = []
+    
+    def write(self, new_data) :
+        
+        if len(self.sound_list) != 0 :
+            return
+        
+        new_data = new_data.split(',')
+
+        if len(new_data) != 2 :
+            self.sound_list.append('data_error')
+            return
+
+        ecg, gsr = new_data
+
+        if not is_float(ecg) :
+            self.sound_list.append('ecg')
+            
+        if not is_float(gsr) :
+            self.sound_list.append('gsr')
+        
+        if not is_float(ecg) or not is_float(gsr) :
+            return
+        
+        ecg = float(ecg) 
+        gsr = float(gsr)
+        
+        if self.ecg_upper_limit <= ecg or ecg <= self.ecg_lower_limit :
+            self.sound_list.append('ecg')
+        if self.gsr_upper_limit <= gsr or gsr <= self.gsr_lower_limit :
+            self.sound_list.append('gsr')
+        
+        if len(self.sound_list) != 0 :
+            self.play_sound()
+
+    def play_sound(self):
+        threading.Thread(target=self._run).start()
+
+    def _run(self):
+        for kind in self.sound_list:
+            if kind == 'data_error':
+                winsound.Beep(self.data_error_freq, self.duration)
+                print 'Input data format error !'
+            elif kind == 'ecg':
+                winsound.Beep(self.ecg_freq, self.duration)
+                print 'ecg problem'
+            elif kind == 'gsr':
+                winsound.Beep(self.gsr_freq, self.duration)
+                print 'gsr problem'
+            else :
+                raise ValueExeption('unknown kind', type(kind), str(kind))
+        time.sleep(self.wait_time)
+        self.sound_list = []
+
 
 class StreamManager:
+    """Manages the distribution of streams."""
 
-    def __init__(self,stream_reader):
+    def __init__(self, stream_reader):
         self.stream_reader = stream_reader
         self.writers = []
         self.is_running = False
+        self.jobs = []
 
-    def addWriter(self,writer):
-        self.writers.append(writer)
+    def addWriter(self, writer):
+        if not self.is_running :
+            self.writers.append(writer)
+        else:
+            self.jobs.append(('add',writer))
+
+    def removeWriter(self, writer):
+        if not self.is_running:
+            self.writers.remove(writer)
+        else:
+            self.jobs.append(('rem',writer))
 
     def start(self):
-        if self.is_running :
+        if self.is_running:
             raise Exception('StreamManager already running!')
         self.is_running = True
         threading.Thread(target=self._run).start()
-        print 'StreamManager reading at port: ' + str(self.stream_reader.port) + ' !'
+        #print 'StreamManager reading at port: ' + str(self.stream_reader.port) + ' !'
 
     def _run(self) :
         while self.is_running :
             data = self.stream_reader.read()
-            for w in self.writers :
+            for w in self.writers:
                 w.write(data)
+
+            if self.jobs == []:
+                continue
+
+            jobs = self.jobs
+            self.jobs = []
+
+            for job in jobs :
+                if job[0] == 'add':
+                    self.writers.append(job[1])
+                elif job[0] == 'rem':
+                    self.writers.remove(job[1])
+                else :
+                    print 'No such job:', job[0]
+
+            #print self.writers
 
     def stop(self):
         self.is_running = False
@@ -351,7 +486,7 @@ class StreamBuffer:
 
 
 class UdpStreamer :
-    """ Calls a programm and streams stdout to some port via udp"""
+    """Call a programm and streams stdout to some port via udp."""
     
     def __init__(self, app_path, destination):
         if destination == 'adhock':
@@ -390,4 +525,3 @@ class UdpStreamer :
             yield line
             if(retcode is not None):
                 break
- 

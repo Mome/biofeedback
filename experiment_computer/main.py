@@ -1,4 +1,13 @@
+"""Command line interface to record e-Health data.
+
+-i, --input : arduino, raspi, dummy
+
+"""
+
+
+
 import argparse
+import os
 import time
 
 import configurations as conf
@@ -21,14 +30,15 @@ def main():
         args.input = ['arduino','raspi','dummy'][int(i)-1]
     
     if args.output == None :
-        num = raw_input('Choose any output - 1 for Terminal ,  2 for Graphical  or  3 for File : ')
-        choices = ['terminal','graphical','file']
+        num = raw_input('Choose any output - 1 for Terminal ,  2 for Graphical,  3 for File  or 4 for Audio: ')
+        choices = ['terminal','graphical','file','audio']
         args.output=[]
         for i in num :
             args.output.append(choices[int(i)-1])
     
     if args.port==None and args.input=='arduino' :
-        ports = stream_manager.SerialStreamReader.list_serial_ports()
+        #ports = stream_manager.SerialStreamReader.list_serial_ports()
+        ports = [port_tuple[0] for port_tuple in stream_manager.list_comports()]
         print 'Available ports:', ports
         if len(ports) > 1 :
             args.port = raw_input('Choose a port: ')
@@ -50,6 +60,8 @@ def main():
     elif args.input == 'dummy':
         reader = stream_manager.DummyStreamReader()
         plot_mask = [0,1]
+
+    # plot_labels = ['ecg','gsr']
 
     manager = stream_manager.StreamManager(reader)
     
@@ -94,7 +106,11 @@ def main():
         comment = ''
         source = args.input
         subject.add_record(record_number, filepath, session, start_time, source, sample_rate, column_labels, marker, comment)
-
+    
+    if 'audio' in args.output :
+        t_writer = stream_manager.AudioWriter(plot_mask)
+        manager.addWriter(t_writer)
+    
     manager.start()
     
     # ------------------------------ #
@@ -104,5 +120,26 @@ def main():
     manager.stop()
     print 'zuende'
 
+def create_singelton():
+    home_folder = os.path.expanduser('~')
+    open(home_folder + os.sep + 'physio_singleton_lock','w')
+
+def remove_singleton():
+    home_folder = os.path.expanduser('~')
+    os.remove(home_folder + os.sep + 'physio_singleton_lock')
+
+def singleton_exists():
+    home_folder = os.path.expanduser('~')
+    return os.path.exists(home_folder + os.sep + 'physio_singleton_lock')
+
 if __name__=='__main__':
-    main()
+    if not singleton_exists() :
+        try :
+            create_singelton()
+            main()
+        finally :
+            remove_singleton()
+    else :
+        print 'Programm already running.'
+        print 'Close all other instances !! If you are sure no other instance is running remove the file "physio_singleton_lock" from your home directory.'
+        #raw_input('Press ENTER to continue.')
