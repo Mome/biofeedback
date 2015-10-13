@@ -51,23 +51,35 @@ def runProcess(exe):
         if(retcode is not None):
             break
 
-def server(app):
-    ip = '10.42.0.1'
-    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 
-    for line in runProcess(app):
+def server(ip, port):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    appname = 'get_sensor_data' # name of executable, that reads out the data
+    print 'send data to: ' + ip + ', ' + str(port)
+    for line in runProcess(appname):
+	#print 'send data: ', line.strip()
         sock.sendto(line.strip(), (ip, port))
 
-def client():
-    ip = '10.42.0.2'
+
+def client(port):
+    #ip = '10.42.0.1'
     sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-    sock.bind(('',port))
+    sock.bind(('', port))
+    print 'try to read from port:', str(port)
     while 1:
         data, addr = sock.recvfrom(1024)
         print "received message:", data
 
+
 if __name__=='__main__':
+    wifi_ip = '10.42.0.2'
+    ether_ip = "131.173.37.126"
+    port = 6666
+    if len(sys.argv)==1:
+        print 'Please specify `server` or `client`'
     if sys.argv[1]=='server':
-        server(sys.argv[2:])
+        server(ether_ip,port)
     elif sys.argv[1]=='client':
-        client()
+        client(port)
+    else:
+        print 'Only `server` or `client` as parameters possible!'
