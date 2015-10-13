@@ -45,7 +45,8 @@ def plot_subject(subject, session, options):
 
     if options.save:
         for name,fig in zip(names,figs):
-            save_plot(name, fig)
+            filename = subject + '_' + session + '_' + name
+            save_plot(filename, fig)
 
     if options.show:
         plt.show()
@@ -303,7 +304,7 @@ def save_plot(name, fig):
     }
     rc('font', **font)
     
-    filename = directory + os.sep + subject + '_' + session + '_' + name + '.png'
+    filename = directory + os.sep + name + '.png'
     fig.savefig(filename)
 
 
@@ -354,16 +355,16 @@ def save_all_plots():
 if __name__=='__main__':
     import sys
     args = sys.argv[1:]
-    #subject = sys.argv[1]
-    #session = sys.argv[2]
 
     #subjects = [312, 315, 317, 320, 322, 329, 330] 
     # [327, 331, 332, 333,
 
     if 'save' in args:
-        subjects = [401, 405, 406, 407, 409, 410, 413, 417]
+        #subjects = [401, 405, 406, 407, 409, 410, 413, 417]
+        subjects = range(400,440)
         sessions = [1,2]
         options = {
+
             'do_gsr' : True,
             'do_blocks' : True,
             'figsize' : (60,30),

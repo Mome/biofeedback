@@ -28,6 +28,12 @@ def get_data(subject, session) :
     if len(trials[0]) == 0 :
         raise DataAccessError('no trials extracted')
 
+    # convert trial times to UTC
+    if int(subject) >= 400:
+        one_hour_in_secs = 60*60
+        trials[0] -= one_hour_in_secs
+        trials[1] -= one_hour_in_secs 
+        
     # get first and last timestamp
     min_tr0  = min(trials[0])
     min_tr1  = min(trials[1])
@@ -83,10 +89,17 @@ def raw_block_times(subject_number, session_number):
 
 
 def get_game_data3(subject_number, session_number = None, trial_id = None, silent=False):
+
     if not silent :
-        print PATH_TO_DB
-        print os.path.exists(PATH_TO_DB)
+        print PATH_TO_DB,
+        if not os.path.exists(PATH_TO_DB):
+            print 'this path does not exists'
+        else:
+            print 'this folder exists'
+        sys.stdout.flush()
+
     con = sqlite3.connect(PATH_TO_DB)
+    #raw_input('press to select')
     # original Lucas : "select * from TRIALS_WITH_STATUS where Subject_number = "
     # Kriz change : "select * from TRIALS_WITH_STATUS_NOT_NULL where Subject_number = "
     sql = "select * from TRIALS_WITH_STATUS_NOT_NULL_AND_TABLE_SUCCESS where Subject_number = " + str(subject_number)
@@ -121,8 +134,9 @@ def get_physio_data_new(subject_num, session_num):
     if not subject_path.exists() :
         raise DataAccessError('Subject folder not found !')
 
-    # load recodrs and set to absolute time
     physio_data = pd.DataFrame()
+
+    # record file name pattern
     pattern = 'physio_record_' + subject_num + '_' + session_num + '_*.csv'
 
     # raise error is no data files found    
@@ -144,7 +158,7 @@ def get_physio_data_new(subject_num, session_num):
     physio_data = physio_data.rename(columns={'absolute_time':'time','gsr':'gsr'})
         
     # sort records by time
-    physio_data = physio_data.sort('time')
+    physio_data = physio_data.sort('time')    
     
     return physio_data
 
