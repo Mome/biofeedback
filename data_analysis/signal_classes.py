@@ -18,6 +18,7 @@ class Signal(object) :
         self.sampling_rate = 1 / np.median(np.diff(time_scale))
 
     def remove_invalid_values(self, lower_bound=float('-inf'), upper_bound=float('inf')) :
+        """bound values are excluded !!!"""
         valid_indices = (lower_bound < self.signal) * (self.signal < upper_bound)
         self.time_scale = self.time_scale[valid_indices]
         self.signal = self.signal[valid_indices]
@@ -292,7 +293,6 @@ class EcgSignal(Signal):
 
         return LF/HF
 
-
     def interpolate_RR(self):
         out = []
         for beats in self.beat_intervalls :
@@ -304,7 +304,6 @@ class EcgSignal(Signal):
             RR = RR_f(np.linspace(min(beats),max(beats),len(beats)))
             out.append(RR)
         self.RR = out
-        
 
     """ probabliy not really needed any more """
     def remove_holes(self, smoothing_factor=0.75):

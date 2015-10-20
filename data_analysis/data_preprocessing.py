@@ -78,11 +78,11 @@ def process_gsr(gsr_signal):
     gsr_signal.remove_invalid_values()
     #gsr_signal.filter_median(size=5)
 
-    eprint('GSR: median filtering')
-    gsr_signal.filter_median(size=3)
+    #eprint('GSR: median filtering')
+    #gsr_signal.filter_median(size=3)
 
-    eprint('GSR: lowpass filtering')
-    gsr_signal.low_pass('cos',50)
+    #eprint('GSR: lowpass filtering')
+    #gsr_signal.low_pass('cos',50)
     
     eprint('GSR: processing finished!')
     eprint()
