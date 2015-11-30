@@ -1,5 +1,6 @@
 import collections
 import datetime
+from itertools import chain
 import time
 import sys
 
@@ -13,6 +14,8 @@ import data_access as da
 from rpeakdetect import detect_beats
 from utils import is_float, BP, erase_and_print as eprint
 
+from pprint import pprint
+
 
 def process_data(physio_data, trials, subject, session, options) :
 
@@ -20,6 +23,7 @@ def process_data(physio_data, trials, subject, session, options) :
     trial_ends = trials[1]
     trial_conditions = trials[2]
     trial_ids = trials[3]
+    trial_success = trials[4]
 
     blocks = da.join_trials_to_blocks(trial_starts, trial_ends, trial_conditions)
     block_starts = blocks[0]
@@ -60,7 +64,12 @@ def process_data(physio_data, trials, subject, session, options) :
             dd['mean_gsr_for_trials'] = gsr_signal.mean_gsr_for_trials(trial_starts, trial_ends)
         if options.do_blocks:
             dd['mean_gsr_for_blocks'] = gsr_signal.mean_gsr_for_trials(block_starts, block_ends)
-    
+        if options.do_trials:
+            cfp, tifp, sfp = cal_condition_and_trial_id_for_physio(dd['time_scale'], trial_starts, trial_ends, trial_conditions, trial_ids, trial_success)
+            dd['conditions_for_physio'] = cfp
+            dd['trial_ids_for_physio'] = tifp
+            dd['success_for_physio'] = sfp
+
     return collections.namedtuple('Results', dd.keys())(*dd.values())
 
 
@@ -84,8 +93,45 @@ def process_gsr(gsr_signal):
     #eprint('GSR: lowpass filtering')
     #gsr_signal.low_pass('cos',50)
     
-    eprint('GSR: processing finished!')
-    eprint()
+    #eprint('GSR: processing finished!')
+    #eprint()
+
+
+def cal_condition_and_trial_id_for_physio(physio_times, trial_starts, trial_ends, conditions, trial_ids, success):
+    
+    conditions_for_physio = [None]*len(physio_times)
+    trial_ids_for_physio  = [None]*len(physio_times)
+    success_for_physio    = [None]*len(physio_times)
+    in_intervall = False
+    times = chain(*zip(trial_starts, trial_ends))
+    next_time = times.next()
+    curr_index = -1
+    
+    #print(len(trial_starts),len(trial_ids))
+    for i,pt in enumerate(physio_times):
+        #print(type(pt),type(next_time))
+        if pt >= next_time:
+            in_intervall = not in_intervall
+            if in_intervall:
+                curr_index += 1
+            try:
+                next_time = times.next()
+            except StopIteration:
+                next_time = float('inf')
+        
+        if not in_intervall:
+            continue
+        try:
+            conditions_for_physio[i] = conditions[curr_index]
+            trial_ids_for_physio[i] = trial_ids[curr_index]
+            success_for_physio[i] = success[curr_index]
+        except Exception as e:
+            pprint(conditions_for_physio,trial_ids_for_physio)
+            raise e
+
+    
+    return conditions_for_physio, trial_ids_for_physio, success_for_physio
+    
 
 """
 def process_gsr(gsr_signal, time_scale):

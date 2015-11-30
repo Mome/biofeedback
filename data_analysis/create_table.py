@@ -8,7 +8,7 @@ import data_access as da
 import data_preprocessing as dpp
 
 
-def save_table() :
+def save_mean_table() :
 
     subjects = [403, 416, 421, 424, 430, 433, 434, 437,
         419, 420, 425, 426, 428, 429, 432, 436]
@@ -19,13 +19,15 @@ def save_table() :
     options = {
         'do_gsr' : True,
         'do_trials' : True,
+        'only_success' : False,
+        'silent' : True,
     }
 
     # transform all keys to lower case
     options = {key.lower():value for key, value in options.items()}
 
     # add missing keys to options and transform to namedtuple
-    option_keys =('do_ecg','do_gsr','do_blocks','do_trials')
+    option_keys =('do_ecg','do_gsr','do_blocks','do_trials','silent')
     default_opts = dict.fromkeys(option_keys, False)
     default_opts.update(options)
 
@@ -54,7 +56,7 @@ def save_table() :
         subject = str(subject)
         session = str(session)
 
-        physio_data, trials, time_range = da.get_data(subject, session)
+        physio_data, trials, time_range = da.get_data(subject, session, options.only_success)
         time_scale = np.array(physio_data['time'])
 
         #print len(time_range), len(time_scale)
@@ -78,5 +80,75 @@ def save_table() :
             f.writelines(lines)
 
 
+def save_raw_table():
+
+    subjects = [403, 416, 421, 424, 430, 433, 434, 437, 419, 420, 425, 426, 428, 429, 432, 436]
+
+    path = da.config['PATH']['physio_path']
+    path = os.path.join(path, 'extended_physio_table_include_unsuccessful.csv')
+
+    options = {
+        'do_gsr' : True,
+        'do_trials' : True,
+        'only_success' : False,
+        'silent' : True,
+        'overwrite' : False,
+    }
+
+    # transform all keys to lower case
+    options = {key.lower():value for key, value in options.items()}
+
+    # add missing keys to options and transform to namedtuple
+    option_keys =('do_ecg','do_gsr','do_blocks','do_trials','only_success', 'silent','overwrite')
+    default_opts = dict.fromkeys(option_keys, False)
+    default_opts.update(options)
+
+    # convert to named tuple for easier access
+    options = namedtuple('Options', default_opts.keys())(**default_opts)
+
+    # if file already exists cancel everything
+    if not options.overwrite and os.path.exists(path):
+        print path, 'file already exists'
+        return
+
+    # write column names to csv file
+    head = 'subject,session,physio_time,raw_gsr,condition,trial_id,success\n'
+    with open(path,'w') as f:
+        f.write(head)
+
+    # bring subject and session in a form to easy iterate over
+    
+    sessions = [1,2]*len(subjects)
+    subjects = itertools.chain(*zip(subjects,subjects))
+
+    for subject, session in zip(subjects, sessions) :
+
+        print 'processing', subject, session
+
+        subject = str(subject)
+        session = str(session)
+
+        physio_data, trials, time_range = da.get_data(subject, session, options.only_success, options.silent)
+        time_scale = np.array(physio_data['time'])
+
+        #print len(time_range), len(time_scale)
+
+        if len(time_scale) == 0 :
+            raise Exception('not physio data')
+
+        results = dpp.process_data(physio_data, trials, subject, session, options)
+
+        raw_gsr = physio_data['gsr']
+        cond_for_physio = results.conditions_for_physio
+        trial_for_physio = results.trial_ids_for_physio
+        success_for_physio = results.success_for_physio
+
+        lines = [ ','.join([subject, session, str(t), str(gsr), str(cond), str(tid), str(sfp)+ '\n']) for t,gsr,cond,tid,sfp in \
+        zip(time_scale, raw_gsr, cond_for_physio, trial_for_physio, success_for_physio) ]
+
+        with open(path,'a') as f :
+            f.writelines(lines)
+
+
 if __name__ == '__main__':
-    save_table()
+    save_raw_table()

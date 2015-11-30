@@ -10,21 +10,22 @@ import datetime
 import os
 import pathlib
 import sqlite3
+import sys
 
-import numpy
+import numpy as np
 import pandas as pd
 import pylab as pl
 import yaml
 
 
-def get_data(subject, session) :
+def get_data(subject, session, only_success, silent) :
     """ Gets all data for a subject and session"""
 
-    game_data = get_game_data3(subject, session, silent=True)
+    game_data = get_game_data3(subject, session, silent=silent)
     physio_data = get_physio_data(subject, session)
 
     # using my block times extraction
-    trials = extract_trial_times(game_data)
+    trials = extract_trial_times(game_data, only_success)
     if len(trials[0]) == 0 :
         raise DataAccessError('no trials extracted')
 
@@ -66,8 +67,8 @@ def get_block_times(subject_number, session_number):
     df['StartTimeTrial'] = pd.to_datetime(df['StartTimeTrial'])
     df['EndTimeTrial']   = pd.to_datetime(df['EndTimeTrial'])
     #print(type(df['EndTimeTrial'][0]))
-    df['StartTimeTrial'] = ( df['StartTimeTrial'] - datetime.timedelta(hours=1) - datetime.datetime(1970,1,1) ) / numpy.timedelta64(1,'s')
-    df['EndTimeTrial']   = ( df['EndTimeTrial']   - datetime.timedelta(hours=1) - datetime.datetime(1970,1,1) ) / numpy.timedelta64(1,'s')
+    df['StartTimeTrial'] = ( df['StartTimeTrial'] - datetime.timedelta(hours=1) - datetime.datetime(1970,1,1) ) / np.timedelta64(1,'s')
+    df['EndTimeTrial']   = ( df['EndTimeTrial']   - datetime.timedelta(hours=1) - datetime.datetime(1970,1,1) ) / np.timedelta64(1,'s')
 
     # convert to UTC
     #df['StartTimeTrial'] -= 3600
@@ -88,7 +89,7 @@ def raw_block_times(subject_number, session_number):
     return df  
 
 
-def get_game_data3(subject_number, session_number = None, trial_id = None, silent=False):
+def get_game_data3(subject_number, session_number = None, trial_id = None, silent=True):
 
     if not silent :
         print PATH_TO_DB,
@@ -99,10 +100,12 @@ def get_game_data3(subject_number, session_number = None, trial_id = None, silen
         sys.stdout.flush()
 
     con = sqlite3.connect(PATH_TO_DB)
-    #raw_input('press to select')
     # original Lucas : "select * from TRIALS_WITH_STATUS where Subject_number = "
-    # Kriz change : "select * from TRIALS_WITH_STATUS_NOT_NULL where Subject_number = "
-    sql = "select * from TRIALS_WITH_STATUS_NOT_NULL_AND_TABLE_SUCCESS where Subject_number = " + str(subject_number)
+    # kriz's first modification: sql = "select * from TRIALS_WITH_STATUS_NOT_NULL where Subject_number = "
+    
+    sql = "select * from TRIALS_WITH_STATUS_NOT_NULL_AND_TABLE_SUCCESS where Subject_number = "
+    sql += str(subject_number)
+
     if (session_number is not None ):
         sql += " and SessionNumber = " + str(session_number)
     if (trial_id is not None ):
@@ -158,7 +161,7 @@ def get_physio_data_new(subject_num, session_num):
     physio_data = physio_data.rename(columns={'absolute_time':'time','gsr':'gsr'})
         
     # sort records by time
-    physio_data = physio_data.sort('time')    
+    physio_data = physio_data.sort_values(by='time')    
     
     return physio_data
 
@@ -264,16 +267,20 @@ def only_get_physio_starting_times(subject_num):
         print(i,j,time.asctime( time.gmtime(j) ))
 
 
-def extract_trial_times(df):
+def extract_trial_times(df, only_success=True):
 
-    # filter out uncessessful
-    df = df[df['Success']==1]
+    if only_success:
+        # filter out uncessessful and NaN
+        df = df[df['Success'] == 1]
+    else:
+        # only remove NaN
+        df = df[~np.isnan(df['Success'])]
 
     times = df['Zeitpunkt']
     status = df['Status']
-    #types = df['BlockType']
     types = df['Type']
     trial_ids = df['Trial_id']
+    success = df['Success']
 
     times = pd.to_datetime(times)
     times = ( times - datetime.timedelta(hours=1) - datetime.datetime(1970,1,1) ) / pl.timedelta64(1,'s')
@@ -282,6 +289,7 @@ def extract_trial_times(df):
     status = pl.array(status)
     types = pl.array(types)
     trial_ids = pl.array(trial_ids)
+    success = pl.array(success, dtype='int32')
 
     starts = (status == 'StartTimeTrial')
     ends = (status == 'EndTimeTrial')
@@ -301,18 +309,14 @@ def extract_trial_times(df):
     start_times = times[starts]
     end_times = times[ends]
 
-    #print('len(start_times)', len(start_times))
-
-    #print(start_ids.head)
-    #print(end_ids.head)
+    start_success = success[starts]
+    end_success = success[ends]
 
     # check for double trial_ids
-    d = pl.sort(start_ids, axis=None)
-    if any(d[d[1:] == d[:-1]]) :
-        raise DataAccessError('double start trial ids')
-    d = pl.sort(end_ids, axis=None)
-    if any(d[d[1:] == d[:-1]]) :
-        raise DataAccessError('double end trial ids')
+    if len(set(start_ids)) != len(start_ids):
+        DataIntegrityError('start ids not unique')
+    if len(set(end_ids)) != len(end_ids):
+        DataIntegrityError('end ids not unique')
 
     blocks = []
     for si in range(len(start_ids)) :
@@ -320,36 +324,41 @@ def extract_trial_times(df):
         match = pl.where(sid==end_ids)[0]
 
         if len(match) == 0 :
+            DataIntegrityWarning('No "EndTimeTrial" for trial_id: ' + str(sid))
             continue
 
         ei = match[0]
 
         if start_types[si] != end_types[ei] :
-            raise DataAccessError('Unequal types for start and endtrial ' + str(sid))
+            raise DataIntegrityError('Unequal types for start and endtrial ' + str(sid))
+        if start_success[si] != end_success[ei] :
+            raise DataIntegrityError('Unequal success for start and endtrial ' + str(sid)) 
         elif len(match) > 1 :
-            raise DataAccessError('more than one match')
+            raise DataIntegrityError('more than one match')
 
         start_time = start_times[si]
         end_time = end_times[ei]
         trial_type = start_types[si]
-        trial_id = trial_ids[si]
+        success_value = start_success[si]
 
+        # why do I do this?
         if pl.isnan(start_time) or pl.isnan(end_time) :
             continue
 
-        blocks.append((start_time,end_time,trial_type,sid))
+        blocks.append((start_time,end_time,trial_type,sid,success_value))
 
     if blocks == [] :
-        return [],[],[]
+        return None
 
-    start_times, end_times, start_types, start_ids = zip(*blocks)
+    start_times, end_times, start_types, start_ids, success = zip(*blocks)
 
     start_times = pl.array(start_times)
     end_times = pl.array(end_times)
     start_types = pl.array(start_types)
     start_ids = pl.array(start_ids)
+    success = pl.array(success)
 
-    return [start_times, end_times, start_types, start_ids]
+    return [start_times, end_times, start_types, start_ids, success]
 
 
 # joins trials to blocks
@@ -371,6 +380,12 @@ def join_trials_to_blocks(start_times, end_times, start_types):
 class DataAccessError(Exception):
     def __init__(self, message):
         super(DataAccessError, self).__init__(message)
+
+class DataIntegrityError(Exception):
+    pass
+
+class DataIntegrityWarning(RuntimeWarning):
+    pass
 
 config = load_configurations()
 
