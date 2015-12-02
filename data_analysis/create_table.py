@@ -82,10 +82,14 @@ def save_mean_table() :
 
 def save_raw_table():
 
-    subjects = [403, 416, 421, 424, 430, 433, 434, 437, 419, 420, 425, 426, 428, 429, 432, 436]
+    #subjects = [403, 416, 421, 424, 430, 433, 434, 437, 419, 420, 425, 426, 428, 429, 432, 436]
+    
+    subjects = [314, 319,321,323,325,326,327,328,332,333]
 
     path = da.config['PATH']['physio_path']
-    path = os.path.join(path, 'extended_physio_table_include_unsuccessful.csv')
+    version_major = 4
+    version_minor = 0
+    path = os.path.join(path, 'gsr_to_gamedata_table_v' + str(version_nr) + '.' + str(version_minor)  + '.csv')
 
     options = {
         'do_gsr' : True,
