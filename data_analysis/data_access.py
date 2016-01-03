@@ -24,6 +24,13 @@ def get_data(subject, session, only_success, silent) :
     game_data = get_game_data3(subject, session, silent=silent)
     physio_data = get_physio_data(subject, session)
 
+    # test if there is any data!
+    if not all(game_data.shape):
+        raise DataAccessError('empty game data')
+    if not all(physio_data.shape):
+        raise DataAccessError('empty physio data')
+        
+
     # using my block times extraction
     trials = extract_trial_times(game_data, only_success)
     if len(trials[0]) == 0 :
@@ -172,7 +179,6 @@ def get_physio_data_old(subject_num, session_num):
     subject_path = pathlib.Path(PHYSIO_PATH + '/subject_' + subject_num)
     meta_file_path = subject_path.joinpath('physio_meta_' + subject_num + '.yml')
 
-    #print(subject_path)
     if not subject_path.exists() :
         raise DataAccessError('Subject folder not found: '+str(subject_path))
     
@@ -190,10 +196,13 @@ def get_physio_data_old(subject_num, session_num):
     physio_data = pd.DataFrame(columns=column_names)
     pattern = 'physio_record_' + subject_num + '_' + session_num + '_*.csv'
 
-    # raise error is no data files found
-    if len(list(subject_path.glob(pattern)))==0:
+    # raise error is no data files found or starting times are missing
+    record_file_num = len(list(subject_path.glob(pattern)))
+    if record_file_num == 0:
         raise DataAccessError('No record files: '+str(subject_path))
-
+    if record_file_num != len(starting_times):
+        raise DataIntegrityError('Number of record files and number of starting times in meta file not the same!')
+    
     for record_path in subject_path.glob(pattern):
        
         # load physio_data
@@ -217,7 +226,7 @@ def get_physio_data_old(subject_num, session_num):
         physio_data = physio_data.append(physio_record, ignore_index=True)
         
     # sort records by time
-    physio_data = physio_data.sort('time')
+    physio_data = physio_data.sort_values(by='time')
     
     return physio_data
 
@@ -269,6 +278,7 @@ def only_get_physio_starting_times(subject_num):
 
 def extract_trial_times(df, only_success=True):
 
+    #print 'Different values in Success:', set(df['Success'])
     if only_success:
         # filter out uncessessful and NaN
         df = df[df['Success'] == 1]
@@ -381,7 +391,7 @@ class DataAccessError(Exception):
     def __init__(self, message):
         super(DataAccessError, self).__init__(message)
 
-class DataIntegrityError(Exception):
+class DataIntegrityError(DataAccessError):
     pass
 
 class DataIntegrityWarning(RuntimeWarning):

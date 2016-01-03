@@ -51,12 +51,18 @@ def save_mean_table() :
 
     for subject, session in zip(subjects, sessions) :
 
-        print 'processing', subject, session
+        print 'Processing subject %s session %s' % (subject, session)
 
         subject = str(subject)
         session = str(session)
 
-        physio_data, trials, time_range = da.get_data(subject, session, options.only_success)
+        # try to load data
+        try:
+            physio_data, trials, time_range = da.get_data(subject, session, options.only_success)
+        except da.DataAccessError as e:
+            print('Skip subject %s session %s: %s' % (subject, session, e))
+            continue 
+
         time_scale = np.array(physio_data['time'])
 
         #print len(time_range), len(time_scale)
@@ -84,12 +90,17 @@ def save_raw_table():
 
     #subjects = [403, 416, 421, 424, 430, 433, 434, 437, 419, 420, 425, 426, 428, 429, 432, 436]
     
-    subjects = [314, 319,321,323,325,326,327,328,332,333]
+    #subjects = [314, 319,321,323,325,326,327,328,332,333]
+
+    subjects = [312,314,315,317,320,322,
+                329,330,332,403,416,419,
+                420,421,424,425,426,428,
+                430,432,433,436,437]
 
     path = da.config['PATH']['physio_path']
-    version_major = 4
+    version_major = 5
     version_minor = 0
-    path = os.path.join(path, 'gsr_to_gamedata_table_v' + str(version_nr) + '.' + str(version_minor)  + '.csv')
+    path = os.path.join(path, 'gsr_to_gamedata_table_v' + str(version_major) + '.' + str(version_minor)  + '.csv')
 
     options = {
         'do_gsr' : True,
@@ -127,12 +138,18 @@ def save_raw_table():
 
     for subject, session in zip(subjects, sessions) :
 
-        print 'processing', subject, session
+        print 'Processing subject %s session %s' % (subject, session)
 
         subject = str(subject)
         session = str(session)
 
-        physio_data, trials, time_range = da.get_data(subject, session, options.only_success, options.silent)
+        # skip 
+        try:
+            physio_data, trials, time_range = da.get_data(subject, session, options.only_success, options.silent)
+        except da.DataAccessError as e:
+            print('Skip subject %s session %s: %s' % (subject, session, e))
+            continue
+
         time_scale = np.array(physio_data['time'])
 
         #print len(time_range), len(time_scale)
