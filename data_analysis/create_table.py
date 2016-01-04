@@ -96,7 +96,7 @@ def save_raw_table():
                 329,330,332,403,416,419,
                 420,421,424,425,426,428,
                 430,432,433,436,437]
-
+    
     path = da.config['PATH']['physio_path']
     version_major = 5
     version_minor = 0
@@ -107,7 +107,7 @@ def save_raw_table():
         'do_trials' : True,
         'only_success' : False,
         'silent' : True,
-        'overwrite' : False,
+        'overwrite' : True,
     }
 
     # transform all keys to lower case

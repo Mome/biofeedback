@@ -276,15 +276,27 @@ def only_get_physio_starting_times(subject_num):
         print(i,j,time.asctime( time.gmtime(j) ))
 
 
-def extract_trial_times(df, only_success=True):
+def extract_trial_times(df, only_success):
 
     #print 'Different values in Success:', set(df['Success'])
     if only_success:
         # filter out uncessessful and NaN
         df = df[df['Success'] == 1]
     else:
-        # only remove NaN
-        df = df[~np.isnan(df['Success'])]
+        # (empty strings seem to be equivalent to nans in earlier experiment data)
+        suc = df['Success']
+        if suc.dtype == np.dtype('int64'):
+            pass # do nothing, since there cant be nans or strings
+        elif suc.dtype == np.dtype('float64'):
+            # if dtype is float64 remove nanas
+            df = df[~np.isnan(suc)]
+        elif suc.dtype == np.dtype('O'):
+            # if dtype is object: remove empy stirngs
+            df = df[suc != '']
+            if 'nan' in suc:
+                raise DataIntegrityError('Empty stirng and nan in Success column!')
+        else:
+            raise DataIntegrityError('Unknown dtype for Success column: ' + str(suc.dtype))
 
     times = df['Zeitpunkt']
     status = df['Status']
